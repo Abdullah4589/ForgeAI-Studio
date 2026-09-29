@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/* One dark theme, one accent (ember). Components use these tokens, never raw hex. */
+@theme {
+  --color-canvas: #0c0c0e;
+  --color-panel: #141417;
+  --color-raised: #1b1b1f;
+  --color-line: #2a2a30;
+  --color-ink: #ececef;
+  --color-muted: #a1a1aa;
+  --color-faint: #71717a;
+  --color-accent: #e8913a;
+  --color-accent-strong: #f0a355;
+  --color-accent-ink: #1a1206;
+  --color-danger: #f26d6d;
+  --color-ok: #5fc98a;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+input[type="range"] {
+  accent-color: var(--color-accent);
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
