@@ -43,6 +43,7 @@ const child = spawn(
       MODEL_DIRECTORY: join(storage, "models"),
       LORA_DIRECTORY: join(storage, "loras"),
       OUTPUT_DIRECTORY: join(storage, "outputs"),
+      DATASET_DIRECTORY: join(storage, "datasets"),
       CORS_ORIGINS: `http://localhost:${webPort},http://127.0.0.1:${webPort}`,
       LOG_LEVEL: "WARNING",
     },

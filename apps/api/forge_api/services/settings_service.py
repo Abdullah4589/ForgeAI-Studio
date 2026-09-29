@@ -36,6 +36,7 @@ def runtime_config(settings: Settings, device: str) -> RuntimeConfigOut:
         model_directory=str(settings.model_directory),
         lora_directory=str(settings.lora_directory),
         output_directory=str(settings.output_directory),
+        dataset_directory=str(settings.dataset_directory),
         device=device,
         generation_backend=settings.generation_backend,
         enable_cpu_offload=settings.enable_cpu_offload,

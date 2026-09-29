@@ -2,13 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, Columns3, Cpu, Flame, History, Layers, Settings, Sparkles } from "lucide-react";
+import {
+  Boxes,
+  Columns3,
+  Cpu,
+  Flame,
+  History,
+  Images,
+  Layers,
+  Settings,
+  Sparkles,
+} from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/generate", label: "Generate", icon: Sparkles },
   { href: "/compare", label: "Compare", icon: Columns3 },
   { href: "/models", label: "Models", icon: Boxes },
   { href: "/loras", label: "LoRAs", icon: Layers },
+  { href: "/datasets", label: "Datasets", icon: Images },
   { href: "/history", label: "History", icon: History },
   { href: "/system", label: "System", icon: Cpu },
   { href: "/settings", label: "Settings", icon: Settings },

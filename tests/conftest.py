@@ -18,6 +18,7 @@ def settings(tmp_path: Path) -> Settings:
         model_directory=models,
         lora_directory=tmp_path / "loras",
         output_directory=tmp_path / "outputs",
+        dataset_directory=tmp_path / "datasets",
         generation_backend="mock",
         mock_step_delay_seconds=0,
         model_idle_unload_seconds=0,

@@ -16,7 +16,16 @@ from forge_api.db.session import create_db_engine, create_session_factory, run_m
 from forge_api.errors import register_error_handlers
 from forge_api.jobs.manager import JobManager
 from forge_api.logging_config import configure_logging
-from forge_api.routes import compare, generation, history, images, loras, models, system
+from forge_api.routes import (
+    compare,
+    datasets,
+    generation,
+    history,
+    images,
+    loras,
+    models,
+    system,
+)
 from forge_api.services.compare_service import mark_interrupted
 from forge_api.services.lora_service import sync_loras
 from forge_api.services.model_service import sync_models
@@ -81,7 +90,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["Content-Type"],
     )
     register_error_handlers(app)
-    for module in (system, models, loras, generation, compare, history, images):
+    for module in (system, models, loras, generation, compare, history, images, datasets):
         app.include_router(module.router)
     return app
 

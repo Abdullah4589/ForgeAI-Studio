@@ -21,6 +21,7 @@ class RuntimeConfigOut(ApiModel):
     model_directory: str
     lora_directory: str
     output_directory: str
+    dataset_directory: str
     device: str
     generation_backend: str
     enable_cpu_offload: bool
