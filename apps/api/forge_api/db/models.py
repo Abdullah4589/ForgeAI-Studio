@@ -88,11 +88,38 @@ class Generation(Base):
     duration_ms: Mapped[int]
     device: Mapped[str] = mapped_column(String(32))
     model_config_json: Mapped[dict[str, Any]] = mapped_column("model_config", JSON, default=dict)
+    # Set when this generation is one cell of a comparison; the index is its position.
+    comparison_id: Mapped[int | None] = mapped_column(
+        ForeignKey("comparisons.id", ondelete="SET NULL"), index=True
+    )
+    comparison_index: Mapped[int | None]
 
     images: Mapped[list["GenerationImage"]] = relationship(
         back_populates="generation",
         cascade="all, delete-orphan",
         order_by="GenerationImage.index",
+    )
+    comparison: Mapped["Comparison | None"] = relationship(back_populates="generations")
+
+
+class Comparison(Base):
+    """One prompt generated several times, varying a single setting (the axis)."""
+
+    __tablename__ = "comparisons"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow, index=True)
+    prompt: Mapped[str] = mapped_column(Text)
+    # "lora_strength" | "seed" | "model"
+    axis: Mapped[str] = mapped_column(String(32))
+    # One entry per cell, in display order. Cells missing from `generations` were not produced.
+    axis_values: Mapped[list[Any]] = mapped_column(JSON)
+    # "running" | "completed" | "cancelled" | "failed" | "interrupted"
+    status: Mapped[str] = mapped_column(String(16), default="running")
+    error_message: Mapped[str | None] = mapped_column(Text)
+
+    generations: Mapped[list[Generation]] = relationship(
+        back_populates="comparison", order_by="Generation.comparison_index"
     )
 
 

@@ -130,10 +130,11 @@ class JobManager:
             job = self._jobs.get(job_id)
             return self._snapshot(job) if job else None
 
-    def active_job(self, kind: str) -> JobSnapshot | None:
+    def active_job(self, kind: str | None = None) -> JobSnapshot | None:
+        """The first queued/running job, optionally of one kind only."""
         with self._lock:
             for job in self._jobs.values():
-                if job.kind == kind and not job.status.is_terminal:
+                if (kind is None or job.kind == kind) and not job.status.is_terminal:
                     return self._snapshot(job)
         return None
 

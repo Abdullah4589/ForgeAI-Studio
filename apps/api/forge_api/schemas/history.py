@@ -39,6 +39,8 @@ class GenerationOut(ApiModel):
     device: str
     # Stored as `model_config` in the DB; renamed because pydantic reserves that attribute.
     pipeline_config: dict[str, Any] = Field(validation_alias="model_config_json")
+    comparison_id: int | None
+    comparison_index: int | None
     images: list[GenerationImageOut]
 
 

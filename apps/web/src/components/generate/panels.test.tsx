@@ -125,7 +125,7 @@ describe("ModelPanel", () => {
   });
 
   it("returns no LoRAs without a model", () => {
-    expect(compatibleLoras([lora({})], undefined)).toEqual([]);
+    expect(compatibleLoras([lora({})], [])).toEqual([]);
   });
 });
 

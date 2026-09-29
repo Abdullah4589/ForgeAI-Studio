@@ -11,9 +11,16 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ai.generation.types import MAX_SEED, GenerationOutput, GenerationParams, LoraRef
+from ai.generation.types import (
+    MAX_SEED,
+    CancelToken,
+    GenerationOutput,
+    GenerationParams,
+    LoraRef,
+    ProgressCallback,
+)
 from forge_api.container import AppServices
-from forge_api.db.models import Generation, GenerationImage
+from forge_api.db.models import DiffusionModel, Generation, GenerationImage
 from forge_api.errors import ConflictError
 from forge_api.jobs.manager import JobContext, JobSnapshot
 from forge_api.logging_config import truncate
@@ -36,10 +43,41 @@ class HistoryLabels:
     lora_name: str | None
 
 
-def start_generation(db: Session, services: AppServices, request: GenerateRequest) -> JobSnapshot:
-    model = model_service.get_model(db, request.model_id)
-    model_service.require_usable(model)
+@dataclass(frozen=True)
+class PreparedGeneration:
+    """A fully validated generation, ready to run without touching the request DB session."""
 
+    params: GenerationParams
+    labels: HistoryLabels
+
+
+@dataclass(frozen=True)
+class ComparisonCell:
+    comparison_id: int
+    index: int
+
+
+def resolve_seed(seed: int | None) -> int:
+    # Always resolve the seed up front so every result can be reproduced from history.
+    return seed if seed is not None else secrets.randbelow(MAX_SEED + 1)
+
+
+def ensure_idle(services: AppServices) -> None:
+    # One job at a time keeps memory predictable and makes Cancel unambiguous in the UI.
+    if services.jobs.active_job() is not None:
+        raise ConflictError("A generation is already in progress. Wait for it or cancel it.")
+
+
+def prepare(
+    db: Session,
+    services: AppServices,
+    *,
+    model: DiffusionModel,
+    request: GenerateRequest,
+    seed: int,
+) -> PreparedGeneration:
+    """Check the model and LoRA can be used together and build the generation parameters."""
+    model_service.require_usable(model)
     lora_ref: LoraRef | None = None
     lora_name: str | None = None
     if request.lora_id is not None:
@@ -51,9 +89,6 @@ def start_generation(db: Session, services: AppServices, request: GenerateReques
         )
         lora_name = lora.name
 
-    if services.jobs.active_job(JOB_KIND) is not None:
-        raise ConflictError("A generation is already in progress. Wait for it or cancel it.")
-
     params = GenerationParams(
         model=model_service.model_ref(services, model),
         prompt=request.prompt,
@@ -62,19 +97,27 @@ def start_generation(db: Session, services: AppServices, request: GenerateReques
         height=request.height,
         steps=request.steps,
         guidance_scale=request.guidance_scale,
-        # Always resolve the seed up front so every result can be reproduced from history.
-        seed=request.seed if request.seed is not None else secrets.randbelow(MAX_SEED + 1),
+        seed=seed,
         num_images=request.num_images,
         lora=lora_ref,
     )
-    labels = HistoryLabels(model.id, model.name, request.lora_id, lora_name)
-    job = services.jobs.submit(JOB_KIND, partial(_run_generation, services, params, labels))
+    return PreparedGeneration(
+        params, HistoryLabels(model.id, model.name, request.lora_id, lora_name)
+    )
+
+
+def start_generation(db: Session, services: AppServices, request: GenerateRequest) -> JobSnapshot:
+    model = model_service.get_model(db, request.model_id)
+    prepared = prepare(db, services, model=model, request=request, seed=resolve_seed(request.seed))
+    ensure_idle(services)
+    job = services.jobs.submit(JOB_KIND, partial(_run_generation, services, prepared))
+    params = prepared.params
     logger.info(
         "generation_requested",
         extra={
             "job_id": job.id,
             "model": model.name,
-            "lora": lora_name,
+            "lora": prepared.labels.lora_name,
             "prompt": truncate(params.prompt),
             "size": f"{params.width}x{params.height}",
             "steps": params.steps,
@@ -89,36 +132,46 @@ def cancel_generation(services: AppServices, job_id: str) -> JobSnapshot | None:
     return services.jobs.cancel(job_id)
 
 
-def _run_generation(
+def execute(
     services: AppServices,
-    params: GenerationParams,
-    labels: HistoryLabels,
-    ctx: JobContext,
-) -> dict[str, Any]:
+    prepared: PreparedGeneration,
+    on_progress: ProgressCallback,
+    cancel: CancelToken,
+    cell: ComparisonCell | None = None,
+) -> int:
+    """Run the backend and store the result in history. Returns the generation id."""
     started = time.perf_counter()
-    ctx.report_progress(0, params.steps, "Preparing model")
-
-    def on_progress(step: int, total: int) -> None:
-        ctx.report_progress(step, total, f"Step {step} of {total}")
-
-    output = services.backend.generate(params, on_progress, ctx.cancel_event)
-    ctx.report_progress(params.steps, params.steps, "Saving images")
+    output = services.backend.generate(prepared.params, on_progress, cancel)
     duration_ms = round((time.perf_counter() - started) * 1000)
-    generation_id = _persist(services, params, labels, output, duration_ms)
+    generation_id = _persist(services, prepared, output, duration_ms, cell)
     logger.info(
         "generation_completed",
         extra={"generation_id": generation_id, "duration_ms": duration_ms, "device": output.device},
     )
+    return generation_id
+
+
+def _run_generation(
+    services: AppServices, prepared: PreparedGeneration, ctx: JobContext
+) -> dict[str, Any]:
+    steps = prepared.params.steps
+    ctx.report_progress(0, steps, "Preparing model")
+
+    def on_progress(step: int, total: int) -> None:
+        ctx.report_progress(step, total, f"Step {step} of {total}")
+
+    generation_id = execute(services, prepared, on_progress, ctx.cancel_event)
     return {"generation_id": generation_id}
 
 
 def _persist(
     services: AppServices,
-    params: GenerationParams,
-    labels: HistoryLabels,
+    prepared: PreparedGeneration,
     output: GenerationOutput,
     duration_ms: int,
+    cell: ComparisonCell | None,
 ) -> int:
+    params, labels = prepared.params, prepared.labels
     output_dir = services.settings.output_directory
     day_folder = datetime.now(UTC).strftime("%Y-%m-%d")
     written: list[Path] = []
@@ -141,6 +194,8 @@ def _persist(
                 duration_ms=duration_ms,
                 device=output.device,
                 model_config_json=output.model_config,
+                comparison_id=cell.comparison_id if cell else None,
+                comparison_index=cell.index if cell else None,
             )
             db.add(generation)
             db.flush()  # assigns generation.id for the filenames

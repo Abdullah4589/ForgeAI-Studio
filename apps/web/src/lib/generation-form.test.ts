@@ -80,6 +80,8 @@ describe("formFromGeneration", () => {
     duration_ms: 1000,
     device: "cpu",
     pipeline_config: {},
+    comparison_id: null,
+    comparison_index: null,
     images: [],
   };
 

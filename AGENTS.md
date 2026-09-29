@@ -4,8 +4,8 @@ Guidance for AI coding agents and contributors working on ForgeAI Studio.
 
 ## Current phase
 
-**Phase 1 (MVP) is complete.** Do not start Phase 2+ work (comparison mode, datasets, captioning,
-LoRA training) unless explicitly asked. See the roadmap in `README.md` and the full specification
+**Phases 1 (MVP) and 2 (comparison mode) are complete.** Do not start Phase 3+ work (datasets,
+captioning, LoRA training) unless explicitly asked. See the roadmap in `README.md` and the full specification
 in `Forge_AI_Studio.md`.
 
 ## Layout
@@ -33,7 +33,12 @@ in `Forge_AI_Studio.md`.
   production behaviour.
 - New architectures: add an `ArchitectureSpec` in `ai/pipelines/registry.py` plus detection.
 - Keep frontend validation limits in `apps/web/src/lib/generation-form.ts` in sync with
-  `apps/api/forge_api/schemas/generation.py`.
+  `apps/api/forge_api/schemas/generation.py` (and `compare-form.ts` with `schemas/compare.py`).
+- Comparisons reuse `generation_service.prepare()` / `execute()` for every cell, so validation and
+  persistence rules live in one place. Each cell is an ordinary `Generation` with a
+  `comparison_id`.
+- When scripting file edits on Windows, read and write with `encoding="utf-8"` explicitly; the
+  default code page corrupts non-ASCII characters such as `…`.
 
 ## Checks (run before committing)
 

@@ -8,9 +8,11 @@ interface SettingsPanelProps {
   form: GenerationForm;
   errors: FormErrors;
   onChange: (field: NumericField, value: string) => void;
+  /** Fields controlled elsewhere, e.g. by a comparison. */
+  hidden?: ("seed" | "numImages")[];
 }
 
-export function SettingsPanel({ form, errors, onChange }: SettingsPanelProps) {
+export function SettingsPanel({ form, errors, onChange, hidden = [] }: SettingsPanelProps) {
   const field = (key: NumericField, label: string, props: NumberInputProps = {}) => (
     <NumberField
       id={key}
@@ -33,32 +35,35 @@ export function SettingsPanel({ form, errors, onChange }: SettingsPanelProps) {
           max: LIMITS.guidanceMax,
           step: 0.5,
         })}
-        <div>
-          <label htmlFor="seed" className="text-muted mb-1 block text-xs font-medium">
-            Seed
-          </label>
-          <div className="flex gap-1">
-            <input
-              id="seed"
-              inputMode="numeric"
-              value={form.seed}
-              placeholder="Random"
-              aria-invalid={errors.seed ? true : undefined}
-              aria-describedby={errors.seed ? "seed-error" : undefined}
-              onChange={(event) => onChange("seed", event.target.value)}
-              className={`${inputClass} font-mono`}
-            />
-            <IconButton
-              label="Random seed"
-              onClick={() => onChange("seed", randomSeed())}
-              className="border-line size-9 shrink-0 border"
-            >
-              <Dices aria-hidden className="size-4" />
-            </IconButton>
+        {!hidden.includes("seed") && (
+          <div>
+            <label htmlFor="seed" className="text-muted mb-1 block text-xs font-medium">
+              Seed
+            </label>
+            <div className="flex gap-1">
+              <input
+                id="seed"
+                inputMode="numeric"
+                value={form.seed}
+                placeholder="Random"
+                aria-invalid={errors.seed ? true : undefined}
+                aria-describedby={errors.seed ? "seed-error" : undefined}
+                onChange={(event) => onChange("seed", event.target.value)}
+                className={`${inputClass} font-mono`}
+              />
+              <IconButton
+                label="Random seed"
+                onClick={() => onChange("seed", randomSeed())}
+                className="border-line size-9 shrink-0 border"
+              >
+                <Dices aria-hidden className="size-4" />
+              </IconButton>
+            </div>
+            <FieldError id="seed-error" message={errors.seed} />
           </div>
-          <FieldError id="seed-error" message={errors.seed} />
-        </div>
-        {field("numImages", "Images", { min: LIMITS.imagesMin, max: LIMITS.imagesMax })}
+        )}
+        {!hidden.includes("numImages") &&
+          field("numImages", "Images", { min: LIMITS.imagesMin, max: LIMITS.imagesMax })}
       </div>
     </Panel>
   );

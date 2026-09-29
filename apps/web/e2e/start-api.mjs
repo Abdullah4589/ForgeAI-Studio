@@ -12,13 +12,16 @@ const port = process.env.E2E_API_PORT ?? "8001";
 const webPort = process.env.E2E_WEB_PORT ?? "3100";
 
 rmSync(storage, { recursive: true, force: true });
-const modelDir = join(storage, "models", "tiny-sd");
-mkdirSync(modelDir, { recursive: true });
-// A diffusers-style folder is enough for discovery; the mock backend never loads weights.
-writeFileSync(
-  join(modelDir, "model_index.json"),
-  JSON.stringify({ _class_name: "StableDiffusionPipeline" }),
-);
+// Diffusers-style folders are enough for discovery; the mock backend never loads weights.
+// Two models so comparison tests can vary the model.
+for (const name of ["tiny-sd", "tiny-sd-b"]) {
+  const modelDir = join(storage, "models", name);
+  mkdirSync(modelDir, { recursive: true });
+  writeFileSync(
+    join(modelDir, "model_index.json"),
+    JSON.stringify({ _class_name: "StableDiffusionPipeline" }),
+  );
+}
 
 const venvPython =
   process.platform === "win32"
