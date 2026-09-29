@@ -196,3 +196,20 @@ test("settings page saves generation defaults", async ({ page }) => {
   await page.getByRole("button", { name: "Save defaults" }).click();
   await expect(page.getByRole("status")).toHaveText("Defaults saved.");
 });
+
+test("explains images blocked by the safety checker", async ({ page }) => {
+  await openGenerate(page);
+  // "mock:blocked" makes the mock backend simulate the safety checker flagging image 1.
+  await generate(page, "e2e safety mock:blocked", { images: 2 });
+
+  const results = page.getByRole("list", { name: "Generated images" });
+  await expect(results.getByRole("img", { name: "Blocked by the safety checker" })).toBeVisible();
+  await expect(results.getByText(/Try more steps or a different seed/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Download image 1" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Download image 2" })).toBeVisible();
+
+  await page.goto("/history");
+  await page.getByRole("searchbox", { name: "Search prompts" }).fill("e2e safety");
+  const entry = page.getByRole("article").filter({ hasText: "e2e safety" });
+  await expect(entry.getByRole("img", { name: "Blocked by the safety checker" })).toBeVisible();
+});

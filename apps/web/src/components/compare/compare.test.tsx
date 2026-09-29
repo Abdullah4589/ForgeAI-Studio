@@ -53,6 +53,7 @@ function cell(index: number, overrides: Partial<Generation> = {}): Generation {
         width: 256,
         height: 256,
         file_size_bytes: 1,
+        safety_blocked: false,
         url: `/api/images/${200 + index}`,
       },
     ],

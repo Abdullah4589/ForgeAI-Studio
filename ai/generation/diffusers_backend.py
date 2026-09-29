@@ -119,8 +119,15 @@ class DiffusersBackend:
         if cancel.is_set():
             raise GenerationCancelledError()
 
+        images = list(result.images)
+        # None (or missing, e.g. on SDXL outputs) when the pipeline has no safety checker.
+        flags = getattr(result, "nsfw_content_detected", None) or [False] * len(images)
+        blocked = [bool(flag) for flag in flags]
+        if any(blocked):
+            logger.warning("images_blocked_by_safety_checker", extra={"count": sum(blocked)})
         return GenerationOutput(
-            images=list(result.images),
+            images=images,
+            safety_blocked=blocked,
             seeds=seeds,
             device=self._device,
             model_config={

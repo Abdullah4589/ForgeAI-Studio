@@ -72,7 +72,7 @@
 - In-process job queue designed to be swapped for Redis/Celery
 - SQLAlchemy 2 + Alembic migrations (SQLite by default, PostgreSQL-ready)
 - Structured JSON logging, friendly error messages, no stack traces to users
-- 129 backend tests, 54 frontend unit tests, 15 Playwright E2E tests; CI runs without a GPU
+- 133 backend tests, 55 frontend unit tests, 16 Playwright E2E tests; CI runs without a GPU
 
 ## Screenshots
 
@@ -300,8 +300,10 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
   hardware; a second request while one is running gets `409 Conflict`.
 - Comparisons vary one setting at a time (no grids such as strength × seed yet). Comparing models
   loads each model in turn, which is slow on CPU.
-- Images flagged by a model's built-in NSFW safety checker (which can false-positive, especially at
-  low step counts) are saved as black images, and the UI doesn't yet explain why.
+- SD 1.x models may include an NSFW safety checker, which can false-positive, especially at low
+  step counts. Flagged images are marked and shown as "Blocked by the safety checker" rather than
+  as unexplained black squares. The checker itself can't be turned off from the app. Images
+  generated before this was added aren't marked.
 - AMD (ROCm/DirectML) and Apple Silicon (MPS) acceleration are not wired up; they use CPU mode.
 - The job queue is in-process: jobs are lost if the API restarts, and it doesn't scale across
   workers yet.
