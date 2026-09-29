@@ -50,6 +50,14 @@
 - Base-architecture detection for LoRAs; incompatible adapters are never offered or loaded
 - Enable/disable, trigger words, description and default strength per LoRA
 
+**Comparison mode**
+- One prompt, one varying setting, results side by side: e.g. `No LoRA | LoRA 0.4 | LoRA 0.8`
+- Vary **LoRA strength** (with a no-LoRA baseline), **seed** or **base model**, 2 to 6 cells
+- Everything else, including the seed, is shared, so differences come only from the varied setting
+- All cells are validated before anything runs; finished cells appear while later ones render
+- Cancelling keeps finished cells; past comparisons can be reopened or deleted
+- Every cell is also a normal History entry you can reuse or download
+
 **History**
 - Every generation stored with its full settings, duration, device and pipeline configuration
 - Search prompts, filter by model or LoRA, sort by date, paginate, delete
@@ -64,15 +72,15 @@
 - In-process job queue designed to be swapped for Redis/Celery
 - SQLAlchemy 2 + Alembic migrations (SQLite by default, PostgreSQL-ready)
 - Structured JSON logging, friendly error messages, no stack traces to users
-- 107 backend tests, 33 frontend unit tests, 10 Playwright E2E tests; CI runs without a GPU
+- 129 backend tests, 54 frontend unit tests, 15 Playwright E2E tests; CI runs without a GPU
 
 ## Screenshots
 
 | Generate | History |
 | --- | --- |
 | ![Generate](docs/screenshots/generate.jpg) | ![History](docs/screenshots/history.jpg) |
-| **System** | **LoRAs** |
-| ![System](docs/screenshots/system.jpg) | ![LoRAs](docs/screenshots/loras.jpg) |
+| **Compare** | **System** |
+| ![Compare](docs/screenshots/compare.jpg) | ![System](docs/screenshots/system.jpg) |
 
 ## Architecture
 
@@ -245,7 +253,9 @@ npx playwright test      # E2E; starts the API in mock mode and the web app for 
 The Playwright suite (`apps/web/e2e/`) covers: app load and navigation, model selection, prompt
 entry, generation with progress and results, metadata and download, validation errors,
 cancellation, history search/filter, reuse settings from history and from a result, LoRA import
-(valid and invalid) and use, the System page and saved defaults.
+(valid and invalid) and use, the System page and saved defaults. For comparison mode it covers
+LoRA strengths with a no-LoRA baseline, seeds, models, validation errors, cells appearing while
+the comparison runs, cancelling (finished cells kept), and reopening and deleting comparisons.
 
 ## Docker
 
@@ -278,7 +288,7 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
 ## Roadmap
 
 - [x] **Phase 1 - MVP:** generation, model and LoRA management, history, system page, tests, Docker, CI
-- [ ] **Phase 2 - Comparison mode:** one prompt across LoRA strengths, seeds and models, side by side
+- [x] **Phase 2 - Comparison mode:** one prompt across LoRA strengths, seeds and models, side by side
 - [ ] **Phase 3 - Dataset manager:** upload, caption, dedupe and quality-check training images
 - [ ] **Phase 4 - AI captioning:** vision-language captions with manual review
 - [ ] **Phase 5 - LoRA training:** configurable training with live loss, cancellation and samples
@@ -286,8 +296,12 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
 ## Known limitations
 
 - Only SD 1.x and SDXL text-to-image pipelines; no img2img, inpainting or ControlNet yet.
-- One model in memory and one generation at a time (by design for consumer hardware); a second
-  request while one is running gets `409 Conflict`.
+- One model in memory and one job (generation or comparison) at a time, by design for consumer
+  hardware; a second request while one is running gets `409 Conflict`.
+- Comparisons vary one setting at a time (no grids such as strength × seed yet). Comparing models
+  loads each model in turn, which is slow on CPU.
+- Images flagged by a model's built-in NSFW safety checker (which can false-positive, especially at
+  low step counts) are saved as black images, and the UI doesn't yet explain why.
 - AMD (ROCm/DirectML) and Apple Silicon (MPS) acceleration are not wired up; they use CPU mode.
 - The job queue is in-process: jobs are lost if the API restarts, and it doesn't scale across
   workers yet.
