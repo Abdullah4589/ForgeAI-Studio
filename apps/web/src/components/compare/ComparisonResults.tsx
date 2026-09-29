@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Download, Info, RotateCcw, Trash2 } from "lucide-react";
 import { MetadataDialog } from "@/components/generate/MetadataDialog";
+import { BlockedImage } from "@/components/ui/BlockedImage";
 import { Badge, Button, IconButton } from "@/components/ui/primitives";
 import { imageUrl } from "@/lib/api";
 import { AXIS_LABELS, cellLabel } from "@/lib/compare-form";
@@ -112,7 +113,9 @@ function CellBody({
   const image = cell.images[0];
   return (
     <>
-      {image ? (
+      {image?.safety_blocked ? (
+        <BlockedImage />
+      ) : image ? (
         // eslint-disable-next-line @next/next/no-img-element -- next/image refuses local-IP sources
         <img
           src={imageUrl(image.url)}
@@ -137,7 +140,7 @@ function CellBody({
         <dd className="text-ink">{formatDuration(cell.duration_ms)}</dd>
       </dl>
       <div className="flex justify-end px-1.5 pb-1.5">
-        {image && (
+        {image && !image.safety_blocked && (
           <a
             href={imageUrl(image.url, true)}
             download

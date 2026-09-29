@@ -354,3 +354,9 @@ def test_history_survives_lora_deletion(client: TestClient, tmp_path: Path) -> N
     generation = client.get(f"/api/history/{generation_id}").json()
     assert generation["lora_id"] is None
     assert generation["lora_name"] == "s"
+
+
+def test_safety_checker_blocks_are_recorded(client: TestClient) -> None:
+    job = generate(client, prompt="a fox mock:blocked", num_images=2)
+    images = client.get(f"/api/history/{job['result']['generation_id']}").json()["images"]
+    assert [img["safety_blocked"] for img in images] == [True, False]

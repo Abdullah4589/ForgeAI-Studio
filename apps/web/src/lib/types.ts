@@ -72,6 +72,8 @@ export interface GenerationImage {
   width: number;
   height: number;
   file_size_bytes: number;
+  /** The model's safety checker replaced this image with a black frame. */
+  safety_blocked: boolean;
   url: string;
 }
 

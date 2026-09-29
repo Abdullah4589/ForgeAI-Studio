@@ -12,6 +12,7 @@ class GenerationImageOut(ApiModel):
     width: int
     height: int
     file_size_bytes: int
+    safety_blocked: bool
 
     @computed_field  # type: ignore[prop-decorator]
     @property

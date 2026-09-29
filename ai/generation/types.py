@@ -56,6 +56,11 @@ class GenerationOutput:
     device: str
     # Pipeline details worth persisting for reproducibility (dtype, scheduler, offload...).
     model_config: dict[str, Any] = field(default_factory=dict)
+    # Per image: True when the model's safety checker replaced it with a black image.
+    safety_blocked: list[bool] = field(default_factory=list)
+
+    def is_blocked(self, index: int) -> bool:
+        return index < len(self.safety_blocked) and self.safety_blocked[index]
 
 
 class GenerationBackend(Protocol):

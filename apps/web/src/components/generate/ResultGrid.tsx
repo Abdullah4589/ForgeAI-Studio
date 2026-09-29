@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Copy, Download, Info, RotateCcw, Trash2 } from "lucide-react";
+import { BlockedImage } from "@/components/ui/BlockedImage";
 import { IconButton } from "@/components/ui/primitives";
 import { imageUrl } from "@/lib/api";
 import type { Generation, GenerationImage } from "@/lib/types";
@@ -23,27 +24,33 @@ export function ResultGrid({ generation, onReuse, onCopyPrompt, onDelete }: Resu
       <ul aria-label="Generated images" className={`grid grid-cols-1 gap-4 ${columns}`}>
         {generation.images.map((image) => (
           <li key={image.id} className="border-line bg-panel overflow-hidden rounded-lg border">
-            {/* next/image refuses local-IP sources; these are already-optimised local PNGs. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imageUrl(image.url)}
-              alt={`Generated image ${image.index + 1}: ${generation.prompt}`}
-              width={image.width}
-              height={image.height}
-              className="bg-raised h-auto w-full"
-            />
+            {image.safety_blocked ? (
+              <BlockedImage />
+            ) : (
+              // next/image refuses local-IP sources; these are already-optimised local PNGs.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={imageUrl(image.url)}
+                alt={`Generated image ${image.index + 1}: ${generation.prompt}`}
+                width={image.width}
+                height={image.height}
+                className="bg-raised h-auto w-full"
+              />
+            )}
             <div className="flex items-center justify-between gap-2 px-2 py-1.5">
               <span className="text-muted font-mono text-xs tabular-nums">seed {image.seed}</span>
               <div className="flex">
-                <a
-                  href={imageUrl(image.url, true)}
-                  download
-                  aria-label={`Download image ${image.index + 1}`}
-                  title="Download"
-                  className="text-muted hover:bg-raised hover:text-ink inline-flex size-8 items-center justify-center rounded-md"
-                >
-                  <Download aria-hidden className="size-4" />
-                </a>
+                {!image.safety_blocked && (
+                  <a
+                    href={imageUrl(image.url, true)}
+                    download
+                    aria-label={`Download image ${image.index + 1}`}
+                    title="Download"
+                    className="text-muted hover:bg-raised hover:text-ink inline-flex size-8 items-center justify-center rounded-md"
+                  >
+                    <Download aria-hidden className="size-4" />
+                  </a>
+                )}
                 <IconButton
                   label={`Reuse settings of image ${image.index + 1}`}
                   onClick={() => onReuse(generation, image)}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Play, RotateCcw, Trash2 } from "lucide-react";
+import { BlockedImage } from "@/components/ui/BlockedImage";
 import { Badge, Button } from "@/components/ui/primitives";
 import { imageUrl } from "@/lib/api";
 import { formatDate, formatDuration } from "@/lib/format";
@@ -22,7 +23,11 @@ export function HistoryItem({ generation, onDelete }: HistoryItemProps) {
       aria-label={`Generation ${generation.id}`}
       className="border-line bg-panel grid grid-cols-[96px_1fr] gap-4 rounded-lg border p-3 sm:grid-cols-[128px_1fr]"
     >
-      {cover ? (
+      {cover?.safety_blocked ? (
+        <div className="overflow-hidden rounded-md">
+          <BlockedImage compact />
+        </div>
+      ) : cover ? (
         // eslint-disable-next-line @next/next/no-img-element -- next/image refuses local-IP sources
         <img
           src={imageUrl(cover.url)}

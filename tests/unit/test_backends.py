@@ -90,9 +90,15 @@ def fake_torch(monkeypatch: pytest.MonkeyPatch) -> types.SimpleNamespace:
 
 
 class FakePipe:
-    def __init__(self, error: Exception | None = None, unload_ok: bool = True) -> None:
+    def __init__(
+        self,
+        error: Exception | None = None,
+        unload_ok: bool = True,
+        nsfw: list[bool] | None = None,
+    ) -> None:
         self.error = error
         self.unload_ok = unload_ok
+        self.nsfw = nsfw
         self.calls: list[dict[str, Any]] = []
         self.lora_calls: list[str] = []
         self.scheduler = types.SimpleNamespace()
@@ -107,7 +113,10 @@ class FakePipe:
             kwargs["callback_on_step_end"](self, step, None, {})
             if self._interrupt:
                 break
-        return types.SimpleNamespace(images=["img"] * kwargs["num_images_per_prompt"])
+        images = ["img"] * kwargs["num_images_per_prompt"]
+        if self.nsfw is None:  # e.g. SDXL outputs have no nsfw_content_detected attribute
+            return types.SimpleNamespace(images=images)
+        return types.SimpleNamespace(images=images, nsfw_content_detected=self.nsfw)
 
     def load_lora_weights(self, *_: Any, **__: Any) -> None:
         self.lora_calls.append("load")
@@ -198,3 +207,25 @@ def test_preload_uses_backend_device_settings(fake_torch: Any) -> None:
     DiffusersBackend(manager, device="cpu", enable_cpu_offload=True).preload(params().model)
     assert seen[0].device == "cpu"
     assert seen[0].enable_cpu_offload is False  # offload only applies on CUDA
+
+
+def test_diffusers_backend_reports_safety_checker_blocks(fake_torch: Any) -> None:
+    backend, _ = backend_for(FakePipe(nsfw=[False, True]))
+    output = backend.generate(params(), lambda s, t: None, threading.Event())
+    assert output.safety_blocked == [False, True]
+    assert output.is_blocked(1) and not output.is_blocked(0)
+
+
+def test_diffusers_backend_without_safety_checker_blocks_nothing(fake_torch: Any) -> None:
+    backend, _ = backend_for(FakePipe(nsfw=None))
+    output = backend.generate(params(), lambda s, t: None, threading.Event())
+    assert output.safety_blocked == [False, False]
+
+
+def test_mock_backend_blocked_token_blacks_out_first_image() -> None:
+    output = MockBackend().generate(
+        params(prompt="fox mock:blocked"), lambda s, t: None, threading.Event()
+    )
+    assert output.safety_blocked == [True, False]
+    assert output.images[0].getextrema() == ((0, 0), (0, 0), (0, 0))
+    assert output.images[1].getextrema() != ((0, 0), (0, 0), (0, 0))

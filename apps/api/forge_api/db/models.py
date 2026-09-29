@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from typing import Any, ClassVar
 
-from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, MetaData, String, Text
+from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, MetaData, String, Text, false
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -137,6 +137,8 @@ class GenerationImage(Base):
     width: Mapped[int]
     height: Mapped[int]
     file_size_bytes: Mapped[int] = mapped_column(BigInteger)
+    # The model's safety checker replaced this image with a black one.
+    safety_blocked: Mapped[bool] = mapped_column(default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     generation: Mapped[Generation] = relationship(back_populates="images")

@@ -213,6 +213,7 @@ def _persist(
                         width=image.width,
                         height=image.height,
                         file_size_bytes=path.stat().st_size,
+                        safety_blocked=output.is_blocked(index),
                     )
                 )
             db.commit()

@@ -34,6 +34,7 @@ const generation: Generation = {
       width: 256,
       height: 256,
       file_size_bytes: 10,
+      safety_blocked: false,
       url: "/api/images/11",
     },
     {
@@ -43,6 +44,7 @@ const generation: Generation = {
       width: 256,
       height: 256,
       file_size_bytes: 10,
+      safety_blocked: false,
       url: "/api/images/12",
     },
   ],
@@ -97,6 +99,30 @@ describe("ResultGrid", () => {
     const dialog = screen.getByRole("dialog", { hidden: true });
     expect(dialog).toHaveTextContent("101");
     expect(dialog).toHaveTextContent("tiny sd");
+  });
+});
+
+describe("ResultGrid safety checker", () => {
+  it("explains blocked images instead of showing a black frame", () => {
+    const blocked = {
+      ...generation,
+      images: [{ ...generation.images[0], safety_blocked: true }, generation.images[1]],
+    };
+    render(
+      <ResultGrid
+        generation={blocked}
+        onReuse={vi.fn()}
+        onCopyPrompt={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("img", { name: "Blocked by the safety checker" })).toBeInTheDocument();
+    expect(screen.getByText(/Try more steps or a different seed/)).toBeInTheDocument();
+    // Nothing useful to download, but the settings can still be reused with another seed.
+    expect(screen.queryByRole("link", { name: "Download image 1" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Download image 2" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reuse settings of image 1" })).toBeInTheDocument();
   });
 });
 
