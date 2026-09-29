@@ -82,6 +82,9 @@ class JobContext:
         return self._job.cancel_event
 
     def report_progress(self, step: int, total_steps: int, message: str) -> None:
+        # Once cancellation is requested, keep saying so until the job actually stops.
+        if self._job.cancel_event.is_set():
+            message = "Cancelling…"
         self._manager._update(self._job, step=step, total_steps=total_steps, message=message)
 
 

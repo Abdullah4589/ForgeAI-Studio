@@ -96,7 +96,7 @@ def _run_generation(
     ctx: JobContext,
 ) -> dict[str, Any]:
     started = time.perf_counter()
-    ctx.report_progress(0, params.steps, "Loading model")
+    ctx.report_progress(0, params.steps, "Preparing model")
 
     def on_progress(step: int, total: int) -> None:
         ctx.report_progress(step, total, f"Step {step} of {total}")

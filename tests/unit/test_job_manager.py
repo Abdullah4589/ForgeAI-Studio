@@ -76,6 +76,28 @@ def test_cancel_running_job(manager: JobManager) -> None:
     assert manager.active_job("test") is None
 
 
+def test_progress_after_cancel_keeps_cancelling_message(manager: JobManager) -> None:
+    started = threading.Event()
+    progressed = threading.Event()
+
+    def run(ctx: JobContext) -> dict[str, Any]:
+        started.set()
+        assert ctx.cancel_event.wait(5)
+        ctx.report_progress(3, 10, "Step 3 of 10")
+        progressed.set()
+        time.sleep(0.2)  # give the test time to observe the in-flight state
+        raise GenerationCancelledError()
+
+    job_id = manager.submit("test", run).id
+    assert started.wait(5)
+    manager.cancel(job_id)
+    assert progressed.wait(5)
+    snapshot = manager.get(job_id)
+    assert snapshot is not None
+    assert (snapshot.step, snapshot.message) == (3, "Cancelling…")
+    assert wait_for_terminal(manager, job_id).status == JobStatus.CANCELLED
+
+
 def test_cancel_queued_job_never_runs(manager: JobManager) -> None:
     release = threading.Event()
     ran: list[str] = []
