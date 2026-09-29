@@ -39,6 +39,7 @@ export function GenerateWorkspace({ fromGenerationId, autoRun }: GenerateWorkspa
   const [notice, setNotice] = useState<string | null>(null);
   const [result, setResult] = useState<Generation | null>(null);
   const initialised = useRef(false);
+  const edited = useRef(false);
 
   const onFinished = useCallback(async (job: Job) => {
     if (job.status === "failed") {
@@ -97,11 +98,16 @@ export function GenerateWorkspace({ fromGenerationId, autoRun }: GenerateWorkspa
           return;
         }
         const preferred = modelList.find((m) => m.loaded) ?? usableModels(modelList)[0];
-        setForm(
-          formFromDefaults(
-            { ...EMPTY_FORM, modelId: preferred ? String(preferred.id) : "" },
-            settings.generation_defaults,
-          ),
+        const preferredId = preferred ? String(preferred.id) : "";
+        // If the user started typing before this slow initial fetch resolved, keep their input
+        // and only fill in a model if none is chosen yet.
+        setForm((current) =>
+          edited.current
+            ? { ...current, modelId: current.modelId || preferredId }
+            : formFromDefaults(
+                { ...EMPTY_FORM, modelId: preferredId },
+                settings.generation_defaults,
+              ),
         );
       } catch (err) {
         setError(errorMessage(err));
@@ -114,6 +120,7 @@ export function GenerateWorkspace({ fromGenerationId, autoRun }: GenerateWorkspa
 
   const update = useCallback(
     <K extends keyof GenerationForm>(field: K, value: GenerationForm[K]) => {
+      edited.current = true;
       setForm((current) => ({ ...current, [field]: value }));
       setErrors((current) => ({ ...current, [field]: undefined }));
     },
