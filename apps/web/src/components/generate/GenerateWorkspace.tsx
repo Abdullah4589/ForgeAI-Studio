@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sparkles, Square } from "lucide-react";
 import { Button, EmptyState, ErrorBanner, PageHeader, Panel } from "@/components/ui/primitives";
-import { useGenerationJob } from "@/hooks/useGenerationJob";
+import { useJob } from "@/hooks/useJob";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import {
   EMPTY_FORM,
@@ -55,7 +55,7 @@ export function GenerateWorkspace({ fromGenerationId, autoRun }: GenerateWorkspa
     }
   }, []);
 
-  const { job, elapsedMs, running, start, cancel } = useGenerationJob(onFinished);
+  const { job, elapsedMs, running, start, cancel } = useJob(onFinished);
 
   const submit = useCallback(
     async (values: GenerationForm) => {
@@ -65,7 +65,7 @@ export function GenerateWorkspace({ fromGenerationId, autoRun }: GenerateWorkspa
       setErrors(validation);
       if (Object.keys(validation).length > 0) return;
       try {
-        await start(toRequest(values));
+        await start(() => api.generate(toRequest(values)));
       } catch (err) {
         if (err instanceof ApiError && err.fields.length > 0) {
           setErrors(formErrorsFromApi(err.fields));

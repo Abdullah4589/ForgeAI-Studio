@@ -61,7 +61,7 @@ export interface Job {
   created_at: number;
   started_at: number | null;
   finished_at: number | null;
-  result: { generation_id?: number } | null;
+  result: { generation_id?: number; comparison_id?: number } | null;
   error: { code: string; message: string } | null;
 }
 
@@ -94,6 +94,8 @@ export interface Generation {
   duration_ms: number;
   device: string;
   pipeline_config: Record<string, unknown>;
+  comparison_id: number | null;
+  comparison_index: number | null;
   images: GenerationImage[];
 }
 
@@ -155,4 +157,42 @@ export interface AppSettings {
     max_upload_size_mb: number;
   };
   generation_defaults: GenerationDefaults;
+}
+
+export type CompareAxisKind = "lora_strength" | "seed" | "model";
+
+/** One value per cell. `null` in a LoRA-strength comparison means "without the LoRA". */
+export type CompareAxis =
+  | { kind: "lora_strength"; values: (number | null)[] }
+  | { kind: "seed"; values: number[] }
+  | { kind: "model"; values: number[] };
+
+export interface CompareRequest {
+  axis: CompareAxis;
+  prompt: string;
+  negative_prompt: string;
+  model_id: number | null;
+  lora_id: number | null;
+  lora_strength: number;
+  width: number;
+  height: number;
+  steps: number;
+  guidance_scale: number;
+  seed: number | null;
+}
+
+export type ComparisonStatus = "running" | "completed" | "cancelled" | "failed" | "interrupted";
+
+export interface ComparisonSummary {
+  id: number;
+  created_at: string;
+  prompt: string;
+  axis: CompareAxisKind;
+  axis_values: (number | null)[];
+  status: ComparisonStatus;
+  error_message: string | null;
+}
+
+export interface Comparison extends ComparisonSummary {
+  cells: Generation[];
 }

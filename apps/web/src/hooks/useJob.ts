@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
-import type { GenerateRequest, Job } from "@/lib/types";
+import type { Job } from "@/lib/types";
 
 const TERMINAL = new Set(["completed", "failed", "cancelled"]);
 const POLL_MS = 1000;
@@ -12,10 +12,10 @@ export function isActive(job: Job | null): boolean {
 }
 
 /**
- * Starts a generation job and follows its progress over Server-Sent Events, falling back to
- * polling if the stream drops (e.g. behind a proxy that buffers SSE).
+ * Starts a background job (generation or comparison) and follows its progress over Server-Sent
+ * Events, falling back to polling if the stream drops (e.g. behind a proxy that buffers SSE).
  */
-export function useGenerationJob(onFinished: (job: Job) => void) {
+export function useJob(onFinished: (job: Job) => void) {
   const [job, setJob] = useState<Job | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -72,9 +72,9 @@ export function useGenerationJob(onFinished: (job: Job) => void) {
   );
 
   const start = useCallback(
-    async (request: GenerateRequest) => {
+    async (create: () => Promise<Job>) => {
       stopWatching();
-      const created = await api.generate(request);
+      const created = await create();
       setStartedAt(Date.now());
       setElapsedMs(0);
       setJob(created);

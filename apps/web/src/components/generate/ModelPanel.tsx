@@ -10,53 +10,74 @@ interface ModelPanelProps {
   models: ModelInfo[];
   loras: LoraInfo[];
   onChange: <K extends keyof GenerationForm>(field: K, value: GenerationForm[K]) => void;
+  /** Hide the base model select (e.g. when a comparison varies the model). */
+  hideModel?: boolean;
+  /** Hide the strength slider (e.g. when a comparison varies the strength). */
+  hideStrength?: boolean;
+  /** Models the LoRA must work with; defaults to the selected base model. */
+  loraTargets?: ModelInfo[];
 }
 
 export function usableModels(models: ModelInfo[]): ModelInfo[] {
   return models.filter((m) => m.available && m.architecture !== "unknown");
 }
 
-/** LoRAs that can be applied to the given model; unknown-architecture LoRAs are allowed. */
-export function compatibleLoras(loras: LoraInfo[], model: ModelInfo | undefined): LoraInfo[] {
-  if (!model) return [];
+/** LoRAs usable with every given model; unknown-architecture LoRAs are allowed. */
+export function compatibleLoras(loras: LoraInfo[], targets: ModelInfo[]): LoraInfo[] {
+  if (targets.length === 0) return [];
   return loras.filter(
     (l) =>
       l.enabled &&
       l.available &&
-      (l.base_architecture === "unknown" || l.base_architecture === model.architecture),
+      (l.base_architecture === "unknown" ||
+        targets.every((model) => l.base_architecture === model.architecture)),
   );
 }
 
-export function ModelPanel({ form, errors, models, loras, onChange }: ModelPanelProps) {
+export function ModelPanel({
+  form,
+  errors,
+  models,
+  loras,
+  onChange,
+  hideModel = false,
+  hideStrength = false,
+  loraTargets,
+}: ModelPanelProps) {
   const available = usableModels(models);
   const selectedModel = models.find((m) => String(m.id) === form.modelId);
-  const loraOptions = compatibleLoras(loras, selectedModel);
+  const targets = loraTargets ?? (selectedModel ? [selectedModel] : []);
+  const loraOptions = compatibleLoras(loras, targets);
   const selectedLora = loras.find((l) => String(l.id) === form.loraId);
 
   return (
     <Panel title="Model">
-      <label htmlFor="model" className="text-muted mb-1 block text-xs font-medium">
-        Base model
-      </label>
-      <select
-        id="model"
-        value={form.modelId}
-        aria-invalid={errors.modelId ? true : undefined}
-        aria-describedby={errors.modelId ? "model-error" : undefined}
-        onChange={(event) => {
-          onChange("modelId", event.target.value);
-          onChange("loraId", "");
-        }}
-        className={inputClass}
-      >
-        <option value="">Select a model</option>
-        {available.map((model) => (
-          <option key={model.id} value={model.id}>
-            {model.name} ({architectureLabel(model.architecture)})
-          </option>
-        ))}
-      </select>
-      <FieldError id="model-error" message={errors.modelId} />
+      {!hideModel && (
+        <>
+          <label htmlFor="model" className="text-muted mb-1 block text-xs font-medium">
+            Base model
+          </label>
+          <select
+            id="model"
+            value={form.modelId}
+            aria-invalid={errors.modelId ? true : undefined}
+            aria-describedby={errors.modelId ? "model-error" : undefined}
+            onChange={(event) => {
+              onChange("modelId", event.target.value);
+              onChange("loraId", "");
+            }}
+            className={inputClass}
+          >
+            <option value="">Select a model</option>
+            {available.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.name} ({architectureLabel(model.architecture)})
+              </option>
+            ))}
+          </select>
+          <FieldError id="model-error" message={errors.modelId} />
+        </>
+      )}
       {available.length === 0 && (
         <p className="text-muted mt-2 text-xs">
           No usable models found. Add one to the model directory, then rescan on the{" "}
@@ -67,13 +88,18 @@ export function ModelPanel({ form, errors, models, loras, onChange }: ModelPanel
         </p>
       )}
 
-      <label htmlFor="lora" className="text-muted mt-4 mb-1 block text-xs font-medium">
+      <label
+        htmlFor="lora"
+        className={`text-muted mb-1 block text-xs font-medium ${hideModel ? "" : "mt-4"}`}
+      >
         LoRA
       </label>
       <select
         id="lora"
         value={form.loraId}
-        disabled={!selectedModel}
+        disabled={targets.length === 0}
+        aria-invalid={errors.loraId ? true : undefined}
+        aria-describedby={errors.loraId ? "lora-error" : undefined}
         onChange={(event) => {
           const lora = loras.find((l) => String(l.id) === event.target.value);
           onChange("loraId", event.target.value);
@@ -95,27 +121,29 @@ export function ModelPanel({ form, errors, models, loras, onChange }: ModelPanel
         </p>
       )}
 
-      <div className="mt-4">
-        <div className="mb-1 flex items-center justify-between">
-          <label htmlFor="lora-strength" className="text-muted text-xs font-medium">
-            LoRA strength
-          </label>
-          <span className="text-ink font-mono text-xs tabular-nums">
-            {form.loraStrength.toFixed(2)}
-          </span>
+      {!hideStrength && (
+        <div className="mt-4">
+          <div className="mb-1 flex items-center justify-between">
+            <label htmlFor="lora-strength" className="text-muted text-xs font-medium">
+              LoRA strength
+            </label>
+            <span className="text-ink font-mono text-xs tabular-nums">
+              {form.loraStrength.toFixed(2)}
+            </span>
+          </div>
+          <input
+            id="lora-strength"
+            type="range"
+            min={LIMITS.loraStrengthMin}
+            max={LIMITS.loraStrengthMax}
+            step={0.05}
+            value={form.loraStrength}
+            disabled={!form.loraId}
+            onChange={(event) => onChange("loraStrength", Number(event.target.value))}
+            className="w-full disabled:opacity-40"
+          />
         </div>
-        <input
-          id="lora-strength"
-          type="range"
-          min={LIMITS.loraStrengthMin}
-          max={LIMITS.loraStrengthMax}
-          step={0.05}
-          value={form.loraStrength}
-          disabled={!form.loraId}
-          onChange={(event) => onChange("loraStrength", Number(event.target.value))}
-          className="w-full disabled:opacity-40"
-        />
-      </div>
+      )}
     </Panel>
   );
 }

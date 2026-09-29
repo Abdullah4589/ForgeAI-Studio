@@ -24,6 +24,8 @@ const generation: Generation = {
   duration_ms: 1500,
   device: "cpu",
   pipeline_config: { backend: "mock" },
+  comparison_id: null,
+  comparison_index: null,
   images: [
     {
       id: 11,

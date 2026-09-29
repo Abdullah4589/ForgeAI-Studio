@@ -1,5 +1,8 @@
 import type {
   AppSettings,
+  CompareRequest,
+  Comparison,
+  ComparisonSummary,
   Generation,
   GenerationDefaults,
   GenerateRequest,
@@ -110,6 +113,12 @@ export const api = {
   getGeneration: (id: number) => request<Generation>(`/api/history/${id}`),
   deleteGeneration: (id: number) => request<void>(`/api/history/${id}`, { method: "DELETE" }),
   deleteImage: (id: number) => request<void>(`/api/history/images/${id}`, { method: "DELETE" }),
+
+  compare: (body: CompareRequest) =>
+    request<Job & { comparison_id: number }>("/api/compare", json("POST", body)),
+  listComparisons: (limit = 20) => request<ComparisonSummary[]>(`/api/comparisons?limit=${limit}`),
+  getComparison: (id: number) => request<Comparison>(`/api/comparisons/${id}`),
+  deleteComparison: (id: number) => request<void>(`/api/comparisons/${id}`, { method: "DELETE" }),
 
   getSystem: () => request<SystemInfo>("/api/system"),
   getSettings: () => request<AppSettings>("/api/settings"),
