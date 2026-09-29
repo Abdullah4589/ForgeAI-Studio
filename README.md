@@ -58,6 +58,19 @@
 - Cancelling keeps finished cells; past comparisons can be reopened or deleted
 - Every cell is also a normal History entry you can reuse or download
 
+**Dataset manager** (preparing images for future LoRA training)
+- Create datasets with a target resolution (512 for SD 1.x, 1024 for SDXL)
+- Upload many images at once by drag-and-drop or file picker; PNG, JPEG and WebP are decoded
+  and verified, and invalid files are skipped with a reason
+- Exact duplicates are skipped; near-duplicates (resized or re-saved copies) are detected with a
+  perceptual hash and linked to each other
+- Quality flags: low resolution, extreme aspect ratio, possibly blurry, near-duplicate. Flags are
+  recomputed from the current dataset, so changing the target resolution or removing a copy
+  updates them
+- Per-image captions (the source and time are recorded, ready for AI captioning), resolution and
+  file size, a full-size preview, filters for flagged or uncaptioned images
+- Reorder by drag-and-drop or keyboard-accessible arrows; remove images; rename or delete datasets
+
 **History**
 - Every generation stored with its full settings, duration, device and pipeline configuration
 - Search prompts, filter by model or LoRA, sort by date, paginate, delete
@@ -72,15 +85,17 @@
 - In-process job queue designed to be swapped for Redis/Celery
 - SQLAlchemy 2 + Alembic migrations (SQLite by default, PostgreSQL-ready)
 - Structured JSON logging, friendly error messages, no stack traces to users
-- 133 backend tests, 55 frontend unit tests, 16 Playwright E2E tests; CI runs without a GPU
+- 170 backend tests, 69 frontend unit tests, 22 Playwright E2E tests; CI runs without a GPU
 
 ## Screenshots
 
 | Generate | History |
 | --- | --- |
 | ![Generate](docs/screenshots/generate.jpg) | ![History](docs/screenshots/history.jpg) |
-| **Compare** | **System** |
-| ![Compare](docs/screenshots/compare.jpg) | ![System](docs/screenshots/system.jpg) |
+| **Compare** | **Datasets** |
+| ![Compare](docs/screenshots/compare.jpg) | ![Datasets](docs/screenshots/datasets.jpg) |
+| **System** | |
+| ![System](docs/screenshots/system.jpg) | |
 
 ## Architecture
 
@@ -205,11 +220,13 @@ All settings are environment variables (or a `.env` file in the repo root). See 
 | `MODEL_DIRECTORY` | `./storage/models` | Where base models are discovered |
 | `LORA_DIRECTORY` | `./storage/loras` | Where LoRAs are stored and discovered |
 | `OUTPUT_DIRECTORY` | `./storage/outputs` | Generated PNGs |
+| `DATASET_DIRECTORY` | `./storage/datasets` | Dataset images and thumbnails |
 | `DEVICE` | `auto` | `auto`, `cuda` or `cpu` (falls back to CPU if CUDA is missing) |
 | `GENERATION_BACKEND` | `diffusers` | `diffusers` (real) or `mock` (tests/CI only) |
 | `ENABLE_CPU_OFFLOAD` | `false` | Model CPU offload on CUDA (lower VRAM, slower) |
 | `MODEL_IDLE_UNLOAD_SECONDS` | `600` | Unload the model after this idle time (`0` = never) |
 | `MAX_UPLOAD_SIZE_MB` | `1024` | LoRA upload limit |
+| `MAX_IMAGE_UPLOAD_MB` | `25` | Per-file limit for dataset images |
 | `LOG_LEVEL` | `INFO` | Python log level (JSON logs) |
 | `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated browser origins allowed to call the API |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | API URL used by the browser (frontend) |
@@ -256,6 +273,10 @@ cancellation, history search/filter, reuse settings from history and from a resu
 (valid and invalid) and use, the System page and saved defaults. For comparison mode it covers
 LoRA strengths with a no-LoRA baseline, seeds, models, validation errors, cells appearing while
 the comparison runs, cancelling (finished cells kept), and reopening and deleting comparisons.
+For datasets it covers uploads (with duplicates and invalid files skipped), captions, reordering
+by arrows and drag-and-drop, preview, removal, every quality flag and filter, and renaming and
+deleting datasets. Dataset test images are generated with a small PNG encoder
+(`apps/web/e2e/images.ts`).
 
 ## Docker
 
@@ -289,7 +310,7 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
 
 - [x] **Phase 1 - MVP:** generation, model and LoRA management, history, system page, tests, Docker, CI
 - [x] **Phase 2 - Comparison mode:** one prompt across LoRA strengths, seeds and models, side by side
-- [ ] **Phase 3 - Dataset manager:** upload, caption, dedupe and quality-check training images
+- [x] **Phase 3 - Dataset manager:** upload, caption, dedupe and quality-check training images
 - [ ] **Phase 4 - AI captioning:** vision-language captions with manual review
 - [ ] **Phase 5 - LoRA training:** configurable training with live loss, cancellation and samples
 
@@ -304,6 +325,9 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
   step counts. Flagged images are marked and shown as "Blocked by the safety checker" rather than
   as unexplained black squares. The checker itself can't be turned off from the app. Images
   generated before this was added aren't marked.
+- Dataset quality checks are heuristics: "possibly blurry" measures edge strength and can
+  misjudge deliberately soft or minimalist images. Datasets hold up to 1,000 images, uploads are
+  limited to 50 files per request (the UI batches larger drops), and there's no export yet.
 - AMD (ROCm/DirectML) and Apple Silicon (MPS) acceleration are not wired up; they use CPU mode.
 - The job queue is in-process: jobs are lost if the API restarts, and it doesn't scale across
   workers yet.
@@ -320,6 +344,9 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
 - **Uploads are untrusted:** extension allow-list, streaming size limit, sanitised filenames,
   resolved-path checks that block traversal, and a temp-file then atomic-rename flow, so partial or
   invalid uploads never appear.
+- **Dataset images** are identified by decoding their content, not by extension or MIME type.
+  Images claiming more than 50 megapixels are rejected from the header alone (decompression-bomb
+  protection), and files are stored under random names, never under the uploaded filename.
 - **Files are served by database id**, never by client-supplied paths.
 - **Input validation** on every request (Pydantic, `extra="forbid"`), and SQL only through
   SQLAlchemy with bound parameters, including escaped `LIKE` search.
