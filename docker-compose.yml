@@ -1,0 +1,54 @@
+# Development stack: PostgreSQL + API (CPU) + web UI.
+#   docker compose up --build
+# Models and LoRAs are read from ./storage on the host. See docs/gpu-docker.md for NVIDIA GPUs.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: forge
+      POSTGRES_DB: forge
+      # Local development default only; override via a .env file for anything shared.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forge-dev}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forge -d forge"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://forge:${POSTGRES_PASSWORD:-forge-dev}@db:5432/forge
+      MODEL_DIRECTORY: /app/storage/models
+      LORA_DIRECTORY: /app/storage/loras
+      OUTPUT_DIRECTORY: /app/storage/outputs
+      DEVICE: ${DEVICE:-auto}
+      GENERATION_BACKEND: ${GENERATION_BACKEND:-diffusers}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      CORS_ORIGINS: http://localhost:3000
+    volumes:
+      - ./storage/models:/app/storage/models
+      - ./storage/loras:/app/storage/loras
+      - ./storage/outputs:/app/storage/outputs
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  db-data:

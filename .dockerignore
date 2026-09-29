@@ -1,0 +1,14 @@
+.git
+.venv
+**/__pycache__
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+**/node_modules
+**/.next
+apps/web/test-results
+apps/web/playwright-report
+apps/web/e2e/.e2e-storage
+storage
+.env
+.env.*
