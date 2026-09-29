@@ -72,7 +72,7 @@
 - In-process job queue designed to be swapped for Redis/Celery
 - SQLAlchemy 2 + Alembic migrations (SQLite by default, PostgreSQL-ready)
 - Structured JSON logging, friendly error messages, no stack traces to users
-- 129 backend tests, 54 frontend unit tests, 15 Playwright E2E tests; CI runs without a GPU
+- 133 backend tests, 55 frontend unit tests, 16 Playwright E2E tests; CI runs without a GPU
 
 ## Screenshots
 
