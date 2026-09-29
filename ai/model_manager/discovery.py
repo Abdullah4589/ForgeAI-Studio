@@ -52,8 +52,17 @@ def _describe_diffusers_folder(folder: Path) -> DiscoveredModel:
         logger.warning("model_index_unreadable", extra={"path": str(folder)})
         class_name = ""
     architecture = architecture_from_pipeline_class(class_name)
-    size = sum(p.stat().st_size for p in folder.rglob("*") if p.is_file())
-    return _build(folder, "diffusers", architecture, size)
+    return _build(folder, "diffusers", architecture, _folder_size(folder))
+
+
+def _folder_size(folder: Path) -> int:
+    """Total size of model files, ignoring hidden folders such as Hugging Face's `.cache/`."""
+    return sum(
+        path.stat().st_size
+        for path in folder.rglob("*")
+        if path.is_file()
+        and not any(part.startswith(".") for part in path.relative_to(folder).parts)
+    )
 
 
 def _describe_single_file(path: Path) -> DiscoveredModel | None:

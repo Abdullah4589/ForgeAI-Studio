@@ -39,6 +39,17 @@ def test_scan_identifies_single_file_checkpoints(tmp_path: Path) -> None:
     assert found["xl.safetensors"].architecture == "sdxl"
 
 
+def test_folder_size_ignores_hidden_cache(tmp_path: Path) -> None:
+    folder = write_diffusers_model(tmp_path, "m", "StableDiffusionPipeline")
+    (folder / "unet").mkdir()
+    (folder / "unet" / "weights.safetensors").write_bytes(b"x" * 100)
+    (folder / ".cache" / "download").mkdir(parents=True)
+    (folder / ".cache" / "download" / "partial.incomplete").write_bytes(b"x" * 5000)
+
+    (model,) = scan_models(tmp_path)
+    assert model.size_bytes == 100 + (folder / "model_index.json").stat().st_size
+
+
 def test_corrupt_model_index_yields_unknown(tmp_path: Path) -> None:
     folder = tmp_path / "bad"
     folder.mkdir()
