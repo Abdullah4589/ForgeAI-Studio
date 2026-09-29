@@ -3,12 +3,12 @@ import logging
 from typing import Any
 
 import pytest
-from forge_api.logging_config import JsonFormatter, truncate
-from forge_api.schemas.generation import GenerateRequest
-from forge_api.schemas.settings import GenerationDefaults
 from pydantic import ValidationError
 
 from ai import device
+from forge_api.logging_config import JsonFormatter, truncate
+from forge_api.schemas.generation import GenerateRequest
+from forge_api.schemas.settings import GenerationDefaults
 
 VALID: dict[str, Any] = {"model_id": 1, "prompt": "a cat"}
 

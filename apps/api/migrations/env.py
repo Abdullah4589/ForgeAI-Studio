@@ -1,9 +1,10 @@
 """Alembic environment: uses DATABASE_URL from app settings unless the caller set a URL."""
 
 from alembic import context
+from sqlalchemy import engine_from_config, pool
+
 from forge_api.config import get_settings
 from forge_api.db.models import Base
-from sqlalchemy import engine_from_config, pool
 
 config = context.config
 if not config.get_main_option("sqlalchemy.url"):

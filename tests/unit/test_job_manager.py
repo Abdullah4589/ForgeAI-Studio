@@ -4,9 +4,9 @@ from collections.abc import Iterator
 from typing import Any
 
 import pytest
-from forge_api.jobs.manager import JobContext, JobManager, JobSnapshot, JobStatus
 
 from ai.errors import GenerationCancelledError, OutOfMemoryError
+from forge_api.jobs.manager import JobContext, JobManager, JobSnapshot, JobStatus
 
 
 @pytest.fixture

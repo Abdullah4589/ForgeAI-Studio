@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+
 from forge_api.config import Settings
 from forge_api.main import create_app
-
 from tests.helpers import write_diffusers_model
 
 
