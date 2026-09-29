@@ -3,6 +3,10 @@ import type {
   CompareRequest,
   Comparison,
   ComparisonSummary,
+  Dataset,
+  DatasetImage,
+  DatasetInput,
+  DatasetSummary,
   Generation,
   GenerationDefaults,
   GenerateRequest,
@@ -13,6 +17,7 @@ import type {
   LoraUpdate,
   ModelInfo,
   SystemInfo,
+  UploadResult,
 } from "./types";
 
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(
@@ -119,6 +124,27 @@ export const api = {
   listComparisons: (limit = 20) => request<ComparisonSummary[]>(`/api/comparisons?limit=${limit}`),
   getComparison: (id: number) => request<Comparison>(`/api/comparisons/${id}`),
   deleteComparison: (id: number) => request<void>(`/api/comparisons/${id}`, { method: "DELETE" }),
+
+  listDatasets: () => request<DatasetSummary[]>("/api/datasets"),
+  createDataset: (body: DatasetInput) => request<Dataset>("/api/datasets", json("POST", body)),
+  getDataset: (id: number) => request<Dataset>(`/api/datasets/${id}`),
+  updateDataset: (id: number, changes: Partial<DatasetInput>) =>
+    request<Dataset>(`/api/datasets/${id}`, json("PATCH", changes)),
+  deleteDataset: (id: number) => request<void>(`/api/datasets/${id}`, { method: "DELETE" }),
+  uploadDatasetImages: (id: number, files: File[]) => {
+    const form = new FormData();
+    for (const file of files) form.append("files", file);
+    return request<UploadResult>(`/api/datasets/${id}/images`, { method: "POST", body: form });
+  },
+  updateCaption: (datasetId: number, imageId: number, caption: string) =>
+    request<DatasetImage>(
+      `/api/datasets/${datasetId}/images/${imageId}`,
+      json("PATCH", { caption }),
+    ),
+  deleteDatasetImage: (datasetId: number, imageId: number) =>
+    request<void>(`/api/datasets/${datasetId}/images/${imageId}`, { method: "DELETE" }),
+  reorderDataset: (id: number, imageIds: number[]) =>
+    request<Dataset>(`/api/datasets/${id}/order`, json("PUT", { image_ids: imageIds })),
 
   getSystem: () => request<SystemInfo>("/api/system"),
   getSettings: () => request<AppSettings>("/api/settings"),

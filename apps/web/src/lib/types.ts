@@ -152,6 +152,7 @@ export interface AppSettings {
     model_directory: string;
     lora_directory: string;
     output_directory: string;
+    dataset_directory: string;
     device: string;
     generation_backend: string;
     enable_cpu_offload: boolean;
@@ -197,4 +198,62 @@ export interface ComparisonSummary {
 
 export interface Comparison extends ComparisonSummary {
   cells: Generation[];
+}
+
+export type QualityFlag =
+  "low_resolution" | "extreme_aspect_ratio" | "possibly_blurry" | "near_duplicate";
+
+export interface DatasetImage {
+  id: number;
+  dataset_id: number;
+  position: number;
+  original_filename: string;
+  format: string;
+  width: number;
+  height: number;
+  file_size_bytes: number;
+  blur_score: number;
+  caption: string;
+  /** "manual" today; AI captioning will add another source. */
+  caption_source: string | null;
+  caption_updated_at: string | null;
+  created_at: string;
+  flags: QualityFlag[];
+  near_duplicate_of: number[];
+  url: string;
+  thumbnail_url: string;
+}
+
+export interface DatasetSummary {
+  id: number;
+  name: string;
+  description: string;
+  target_resolution: number;
+  created_at: string;
+  updated_at: string;
+  image_count: number;
+  flagged_count: number;
+  uncaptioned_count: number;
+  cover_thumbnail_url: string | null;
+}
+
+export interface Dataset extends DatasetSummary {
+  images: DatasetImage[];
+}
+
+export interface DatasetInput {
+  name: string;
+  description: string;
+  target_resolution: number;
+}
+
+export interface SkippedUpload {
+  filename: string;
+  reason: string;
+  message: string;
+}
+
+export interface UploadResult {
+  added: DatasetImage[];
+  skipped: SkippedUpload[];
 }

@@ -66,6 +66,7 @@ export default function SettingsPage() {
                 ["Model directory", runtime.model_directory],
                 ["LoRA directory", runtime.lora_directory],
                 ["Output directory", runtime.output_directory],
+                ["Dataset directory", runtime.dataset_directory],
                 ["Device", runtime.device],
                 ["Generation backend", runtime.generation_backend],
                 ["CPU offload", runtime.enable_cpu_offload ? "On" : "Off"],
