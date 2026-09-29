@@ -4,17 +4,17 @@ from fastapi import APIRouter, Query, status
 
 from forge_api.db.models import Comparison
 from forge_api.dependencies import DbDep, ServicesDep
-from forge_api.jobs.manager import JobSnapshot
-from forge_api.schemas.compare import CompareRequest, ComparisonOut, ComparisonSummary
+from forge_api.schemas.compare import (
+    CompareJobOut,
+    CompareRequest,
+    ComparisonOut,
+    ComparisonSummary,
+)
 from forge_api.schemas.generation import JobOut
 from forge_api.schemas.history import GenerationOut
 from forge_api.services import compare_service
 
 router = APIRouter(prefix="/api", tags=["compare"])
-
-
-def _job_out(job: JobSnapshot) -> JobOut:
-    return JobOut.model_validate(job, from_attributes=True)
 
 
 def _comparison_out(comparison: Comparison) -> ComparisonOut:
@@ -25,10 +25,12 @@ def _comparison_out(comparison: Comparison) -> ComparisonOut:
     )
 
 
-@router.post("/compare", response_model=JobOut, status_code=status.HTTP_202_ACCEPTED)
-def compare(body: CompareRequest, db: DbDep, services: ServicesDep) -> JobOut:
+@router.post("/compare", response_model=CompareJobOut, status_code=status.HTTP_202_ACCEPTED)
+def compare(body: CompareRequest, db: DbDep, services: ServicesDep) -> CompareJobOut:
     """Queue a comparison. Progress and cancellation use the generic /api/jobs endpoints."""
-    return _job_out(compare_service.start_comparison(db, services, body))
+    job, comparison_id = compare_service.start_comparison(db, services, body)
+    job_out = JobOut.model_validate(job, from_attributes=True)
+    return CompareJobOut(**job_out.model_dump(), comparison_id=comparison_id)
 
 
 @router.get("/comparisons", response_model=list[ComparisonSummary])

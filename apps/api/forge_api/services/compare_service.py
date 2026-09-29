@@ -83,7 +83,10 @@ def plan(db: Session, services: AppServices, request: CompareRequest) -> Planned
     )
 
 
-def start_comparison(db: Session, services: AppServices, request: CompareRequest) -> JobSnapshot:
+def start_comparison(
+    db: Session, services: AppServices, request: CompareRequest
+) -> tuple[JobSnapshot, int]:
+    """Queue the comparison; returns the job and the id of the comparison it fills in."""
     planned = plan(db, services, request)
     generation_service.ensure_idle(services)
     comparison = Comparison(
@@ -102,7 +105,7 @@ def start_comparison(db: Session, services: AppServices, request: CompareRequest
             "prompt": truncate(planned.prompt),
         },
     )
-    return job
+    return job, comparison.id
 
 
 def _run(

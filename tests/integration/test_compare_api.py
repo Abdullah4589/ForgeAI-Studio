@@ -21,11 +21,11 @@ def compare(client: TestClient, axis: dict[str, Any], **overrides: Any) -> Any:
 def run(client: TestClient, axis: dict[str, Any], **overrides: Any) -> dict[str, Any]:
     response = compare(client, axis, **overrides)
     assert response.status_code == 202, response.text
-    job = wait_for_job(client, response.json()["id"])
+    created = response.json()
+    job = wait_for_job(client, created["id"])
     assert job["status"] == "completed", job
-    comparison: dict[str, Any] = client.get(
-        f"/api/comparisons/{job['result']['comparison_id']}"
-    ).json()
+    assert job["result"]["comparison_id"] == created["comparison_id"]
+    comparison: dict[str, Any] = client.get(f"/api/comparisons/{created['comparison_id']}").json()
     return comparison
 
 

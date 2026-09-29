@@ -4,7 +4,7 @@ from pydantic import Field, model_validator
 
 from ai.generation.types import MAX_SEED
 from forge_api.schemas.common import ApiModel, ApiRequest, UtcDatetime
-from forge_api.schemas.generation import GuidanceScale, ImageSize, NegativePrompt, Steps
+from forge_api.schemas.generation import GuidanceScale, ImageSize, JobOut, NegativePrompt, Steps
 from forge_api.schemas.history import GenerationOut
 
 MIN_CELLS, MAX_CELLS = 2, 6
@@ -67,6 +67,11 @@ class CompareRequest(ApiRequest):
         if kind == "lora_strength" and self.lora_id is None:
             raise ValueError("Choose a LoRA to compare its strengths.")
         return self
+
+
+class CompareJobOut(JobOut):
+    # Known up front so clients can show partial results even if the job is cancelled or fails.
+    comparison_id: int
 
 
 class ComparisonSummary(ApiModel):
