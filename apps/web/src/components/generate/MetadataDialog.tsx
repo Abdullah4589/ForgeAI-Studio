@@ -17,8 +17,9 @@ export function MetadataDialog({ generation, image, onClose }: MetadataDialogPro
 
   useEffect(() => {
     const dialog = ref.current;
-    dialog?.showModal();
-    return () => dialog?.close();
+    // No close() in cleanup: its async "close" event would call onClose and unmount the dialog
+    // during StrictMode's effect re-run. Unmounting removes it from the top layer anyway.
+    if (dialog && !dialog.open) dialog.showModal();
   }, []);
 
   const rows: [string, string][] = [
