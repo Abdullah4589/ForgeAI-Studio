@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+build/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+apps/web/test-results/
+apps/web/playwright-report/
+test-results/
+playwright-report/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Runtime storage (models, LoRAs, generated images, local DB)
+storage/*
+!storage/.gitkeep
+!storage/models/
+!storage/loras/
+!storage/outputs/
+storage/models/*
+storage/loras/*
+storage/outputs/*
+!storage/models/.gitkeep
+!storage/loras/.gitkeep
+!storage/outputs/.gitkeep
+*.db
+*.sqlite3
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
