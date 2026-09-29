@@ -71,6 +71,30 @@ export function CompareWorkspace({ comparisonId }: { comparisonId: number | null
 
   const { job, elapsedMs, running, start, cancel } = useJob(onFinished);
 
+  // Every cell has the same step count, so progress tells us how many cells are finished.
+  // Refetch whenever that number grows, so finished cells appear while later ones still run.
+  const cellCount = comparison?.axis_values.length ?? 0;
+  const finishedCells =
+    running && job && cellCount > 0 && job.total_steps > 0
+      ? Math.floor(job.step / (job.total_steps / cellCount))
+      : 0;
+  useEffect(() => {
+    const id = activeComparisonId.current;
+    if (finishedCells === 0 || id === null) return;
+    let stale = false;
+    api.getComparison(id).then(
+      (loaded) => {
+        if (!stale) setComparison(loaded);
+      },
+      () => {
+        // Best-effort refresh; the final result is fetched again when the job ends.
+      },
+    );
+    return () => {
+      stale = true;
+    };
+  }, [finishedCells]);
+
   useEffect(() => {
     async function initialise() {
       try {
@@ -244,7 +268,7 @@ export function CompareWorkspace({ comparisonId }: { comparisonId: number | null
               )}
             </div>
             <div className="mt-4">
-              <GenerationStatus job={job} elapsedMs={elapsedMs} />
+              <GenerationStatus job={job} elapsedMs={elapsedMs} actionLabel="Compare" />
             </div>
             <div className="mt-3">
               <ErrorBanner message={error} />

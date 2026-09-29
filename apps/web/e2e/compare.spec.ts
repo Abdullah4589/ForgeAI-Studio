@@ -104,12 +104,14 @@ test("cancelling keeps finished cells, and comparisons can be reopened and delet
 }) => {
   await openCompare(page);
   await page.getByLabel("Vary").selectOption("seed");
-  await fillShared(page, "e2e compare cancel", "40");
+  await fillShared(page, "e2e compare cancel", "100");
   await page.getByLabel("Seeds", { exact: true }).fill("1, 2, 3");
   await page.getByRole("button", { name: "Compare", exact: true }).click();
 
   // Cancel once the second cell is under way, so the first one is already saved.
   await expect(page.getByText(/Cell 2 of 3/)).toBeVisible();
+  // Finished cells show up while the comparison is still running.
+  await expect(cells(page).nth(0).getByRole("img")).toBeVisible();
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByText("Cancelled", { exact: true })).toBeVisible();
   await expect(page.getByRole("status")).toHaveText(
