@@ -25,6 +25,7 @@ services:
       MODEL_DIRECTORY: /app/storage/models
       LORA_DIRECTORY: /app/storage/loras
       OUTPUT_DIRECTORY: /app/storage/outputs
+      DATASET_DIRECTORY: /app/storage/datasets
       DEVICE: ${DEVICE:-auto}
       GENERATION_BACKEND: ${GENERATION_BACKEND:-diffusers}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -33,6 +34,7 @@ services:
       - ./storage/models:/app/storage/models
       - ./storage/loras:/app/storage/loras
       - ./storage/outputs:/app/storage/outputs
+      - ./storage/datasets:/app/storage/datasets
     ports:
       - "8000:8000"
     depends_on:
