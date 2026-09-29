@@ -7,7 +7,7 @@ name = "forge-ai-studio"
 version = "0.1.0"
 description = "Self-hosted image generation studio for open-source diffusion models and LoRA adapters."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 dependencies = [
   "fastapi>=0.115",
@@ -45,7 +45,7 @@ include = ["forge_api*", "ai*"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 extend-exclude = ["apps/web", "storage"]
 
 [tool.ruff.lint]
@@ -55,7 +55,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 known-first-party = ["ai", "forge_api", "tests"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = true
 packages = ["forge_api", "ai"]
 mypy_path = "apps/api:."
