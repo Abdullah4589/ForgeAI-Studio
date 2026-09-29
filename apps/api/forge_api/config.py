@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     model_directory: Path = Path("./storage/models")
     lora_directory: Path = Path("./storage/loras")
     output_directory: Path = Path("./storage/outputs")
+    dataset_directory: Path = Path("./storage/datasets")
     device: Literal["auto", "cuda", "cpu"] = "auto"
     generation_backend: Literal["diffusers", "mock"] = "diffusers"
     enable_cpu_offload: bool = False
@@ -24,6 +25,8 @@ class Settings(BaseSettings):
     model_idle_unload_seconds: int = Field(default=600, ge=0)
     log_level: str = "INFO"
     max_upload_size_mb: int = Field(default=1024, gt=0)
+    # Per-file limit for dataset image uploads.
+    max_image_upload_mb: int = Field(default=25, gt=0)
     cors_origins: str = "http://localhost:3000"
 
     @field_validator("log_level")
@@ -36,11 +39,20 @@ class Settings(BaseSettings):
         return self.max_upload_size_mb * 1024 * 1024
 
     @property
+    def max_image_upload_bytes(self) -> int:
+        return self.max_image_upload_mb * 1024 * 1024
+
+    @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     def ensure_directories(self) -> None:
-        for directory in (self.model_directory, self.lora_directory, self.output_directory):
+        for directory in (
+            self.model_directory,
+            self.lora_directory,
+            self.output_directory,
+            self.dataset_directory,
+        ):
             directory.mkdir(parents=True, exist_ok=True)
 
 

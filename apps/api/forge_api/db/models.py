@@ -3,7 +3,17 @@
 from datetime import UTC, datetime
 from typing import Any, ClassVar
 
-from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, MetaData, String, Text, false
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    MetaData,
+    String,
+    Text,
+    UniqueConstraint,
+    false,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -142,6 +152,56 @@ class GenerationImage(Base):
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     generation: Mapped[Generation] = relationship(back_populates="images")
+
+
+class Dataset(Base):
+    """A collection of images (and captions) prepared for LoRA training."""
+
+    __tablename__ = "datasets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(255))
+    description: Mapped[str] = mapped_column(Text, default="")
+    # Shortest side images should have; smaller ones are flagged as low resolution.
+    target_resolution: Mapped[int] = mapped_column(default=512)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
+
+    images: Mapped[list["DatasetImage"]] = relationship(
+        back_populates="dataset",
+        cascade="all, delete-orphan",
+        order_by="DatasetImage.position",
+    )
+
+
+class DatasetImage(Base):
+    __tablename__ = "dataset_images"
+    # The same bytes can't be added to a dataset twice.
+    __table_args__ = (UniqueConstraint("dataset_id", "sha256"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    dataset_id: Mapped[int] = mapped_column(
+        ForeignKey("datasets.id", ondelete="CASCADE"), index=True
+    )
+    position: Mapped[int]
+    # Shown to users only; files on disk use generated names.
+    original_filename: Mapped[str] = mapped_column(String(255))
+    stored_filename: Mapped[str] = mapped_column(String(64))
+    format: Mapped[str] = mapped_column(String(8))
+    width: Mapped[int]
+    height: Mapped[int]
+    file_size_bytes: Mapped[int] = mapped_column(BigInteger)
+    sha256: Mapped[str] = mapped_column(String(64))
+    perceptual_hash: Mapped[str] = mapped_column(String(16))
+    blur_score: Mapped[float]
+    caption: Mapped[str] = mapped_column(Text, default="")
+    # Who wrote the caption ("manual" now; AI captioning will add another source) and when.
+    # AI captioning must not overwrite manual captions without confirmation.
+    caption_source: Mapped[str | None] = mapped_column(String(16))
+    caption_updated_at: Mapped[datetime | None]
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+    dataset: Mapped[Dataset] = relationship(back_populates="images")
 
 
 class ApplicationSetting(Base):
