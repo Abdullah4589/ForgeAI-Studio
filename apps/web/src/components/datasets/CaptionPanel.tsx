@@ -105,6 +105,7 @@ export function CaptionPanel({
           job={job}
           elapsedMs={elapsedMs}
           idleText="Ready. Choose which images to caption, then press Generate captions."
+          runningLabel="Captioning"
         />
       </div>
       <p className="text-faint mt-2 text-xs">

@@ -144,10 +144,12 @@ describe("GenerationStatus", () => {
           result: null,
           error: null,
         }}
+        runningLabel="Training"
       />,
     );
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "25");
     expect(screen.getByText(/Step 5 of 20/)).toBeInTheDocument();
+    expect(screen.getByText("Training")).toBeInTheDocument();
     expect(screen.getByLabelText("Duration")).toHaveTextContent("2.5 s");
   });
 });

@@ -29,7 +29,12 @@ export function ActiveRun({ run, job, running, elapsedMs, onCancel }: ActiveRunP
         ) : undefined
       }
     >
-      <GenerationStatus job={job} elapsedMs={elapsedMs} idleText="Waiting for the run to start." />
+      <GenerationStatus
+        job={job}
+        elapsedMs={elapsedMs}
+        idleText="Waiting for the run to start."
+        runningLabel="Training"
+      />
       <dl
         aria-label="Training progress"
         className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4"
