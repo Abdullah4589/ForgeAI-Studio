@@ -1,5 +1,7 @@
 import type {
   AppSettings,
+  CaptionJob,
+  CaptionRequest,
   CompareRequest,
   Comparison,
   ComparisonSummary,
@@ -143,6 +145,8 @@ export const api = {
     ),
   deleteDatasetImage: (datasetId: number, imageId: number) =>
     request<void>(`/api/datasets/${datasetId}/images/${imageId}`, { method: "DELETE" }),
+  generateCaptions: (datasetId: number, body: CaptionRequest) =>
+    request<CaptionJob>(`/api/datasets/${datasetId}/captions`, json("POST", body)),
   reorderDataset: (id: number, imageIds: number[]) =>
     request<Dataset>(`/api/datasets/${id}/order`, json("PUT", { image_ids: imageIds })),
 
