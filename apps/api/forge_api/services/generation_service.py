@@ -66,7 +66,7 @@ def ensure_idle(services: AppServices) -> None:
     # One job at a time keeps memory predictable and makes Cancel unambiguous in the UI.
     if services.jobs.active_job() is not None:
         raise ConflictError(
-            "Another job (generation, comparison or captioning) is running. "
+            "Another job (generation, comparison, captioning or training) is running. "
             "Wait for it or cancel it."
         )
 

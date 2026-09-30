@@ -27,10 +27,12 @@ from forge_api.routes import (
     loras,
     models,
     system,
+    training,
 )
 from forge_api.services.compare_service import mark_interrupted
 from forge_api.services.lora_service import sync_loras
 from forge_api.services.model_service import sync_models
+from forge_api.services.training_service import mark_interrupted as mark_training_interrupted
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +85,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             sync_models(db, settings.model_directory)
             sync_loras(db, settings.lora_directory)
             mark_interrupted(db)
+            mark_training_interrupted(db)
         services.jobs.start()
         app.state.services = services
         logger.info(
@@ -115,6 +118,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         images,
         datasets,
         captions,
+        training,
     ):
         app.include_router(module.router)
     return app

@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     lora_directory: Path = Path("./storage/loras")
     output_directory: Path = Path("./storage/outputs")
     dataset_directory: Path = Path("./storage/datasets")
+    # Per-run working folders: config, worker log, checkpoints and sample images.
+    training_directory: Path = Path("./storage/training")
+    # diffusers (real training in a worker process) | mock (fake training for tests/CI only)
+    training_backend: Literal["diffusers", "mock"] = "diffusers"
+    # Per-step delay for the mock trainer so progress/cancel are observable in e2e tests.
+    mock_training_step_delay_seconds: float = Field(default=0.05, ge=0)
     device: Literal["auto", "cuda", "cpu"] = "auto"
     generation_backend: Literal["diffusers", "mock"] = "diffusers"
     enable_cpu_offload: bool = False
@@ -57,6 +63,7 @@ class Settings(BaseSettings):
             self.lora_directory,
             self.output_directory,
             self.dataset_directory,
+            self.training_directory,
         ):
             directory.mkdir(parents=True, exist_ok=True)
 
