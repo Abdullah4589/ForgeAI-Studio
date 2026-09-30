@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     enable_cpu_offload: bool = False
     # Artificial per-step delay for the mock backend so progress/cancel are observable in e2e tests.
     mock_step_delay_seconds: float = Field(default=0.05, ge=0)
+    # florence (real, Florence-2) | mock (deterministic captions for tests/CI only)
+    caption_backend: Literal["florence", "mock"] = "florence"
+    caption_model_directory: Path = Path("./storage/captioners/florence-2-base")
+    # Per-image delay for the mock captioner so progress/cancel are observable in e2e tests.
+    mock_caption_delay_seconds: float = Field(default=0.05, ge=0)
     # Unload the model after this many idle seconds so it doesn't hold memory indefinitely.
     model_idle_unload_seconds: int = Field(default=600, ge=0)
     log_level: str = "INFO"

@@ -174,7 +174,9 @@ def upload_images(
 def update_caption(db: Session, dataset_id: int, image_id: int, caption: str) -> DatasetImageOut:
     image = get_image(db, dataset_id, image_id)
     image.caption = caption.strip()
+    # Any edit makes the caption the user's own, protecting it from later AI runs.
     image.caption_source = "manual"
+    image.caption_model = None
     image.caption_updated_at = datetime.now(UTC)
     db.commit()
     return image_out(image, compute_flags(image.dataset))

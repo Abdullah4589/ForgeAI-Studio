@@ -20,6 +20,8 @@ def settings(tmp_path: Path) -> Settings:
         output_directory=tmp_path / "outputs",
         dataset_directory=tmp_path / "datasets",
         generation_backend="mock",
+        caption_backend="mock",
+        mock_caption_delay_seconds=0,
         mock_step_delay_seconds=0,
         model_idle_unload_seconds=0,
         max_upload_size_mb=1,
