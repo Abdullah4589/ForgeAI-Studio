@@ -101,7 +101,11 @@ export function CaptionPanel({
         </p>
       </div>
       <div className="mt-3">
-        <GenerationStatus job={job} elapsedMs={elapsedMs} actionLabel="Generate captions" />
+        <GenerationStatus
+          job={job}
+          elapsedMs={elapsedMs}
+          idleText="Ready. Choose which images to caption, then press Generate captions."
+        />
       </div>
       <p className="text-faint mt-2 text-xs">
         Suggestions are a starting point: review and edit them. Cancelling keeps finished captions;

@@ -12,17 +12,15 @@ const STATUS_LABELS: Record<Job["status"], string> = {
 export function GenerationStatus({
   job,
   elapsedMs,
-  actionLabel = "Generate",
+  idleText = "Ready. Configure your prompt and press Generate.",
 }: {
   job: Job | null;
   elapsedMs: number;
-  /** Name of the button that starts the job, used in the idle hint. */
-  actionLabel?: string;
+  /** Hint shown before any job has started. */
+  idleText?: string;
 }) {
   if (!job) {
-    return (
-      <p className="text-faint text-sm">Ready. Configure your prompt and press {actionLabel}.</p>
-    );
+    return <p className="text-faint text-sm">{idleText}</p>;
   }
   const percent = job.total_steps > 0 ? Math.round((job.step / job.total_steps) * 100) : 0;
   const duration =
