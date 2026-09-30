@@ -71,6 +71,8 @@ export default function SettingsPage() {
                 ["Generation backend", runtime.generation_backend],
                 ["Caption backend", runtime.caption_backend],
                 ["Caption model", runtime.caption_model_directory],
+                ["Training backend", runtime.training_backend],
+                ["Training directory", runtime.training_directory],
                 ["CPU offload", runtime.enable_cpu_offload ? "On" : "Off"],
                 [
                   "Idle model unload",

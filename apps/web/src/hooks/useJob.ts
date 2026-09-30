@@ -75,7 +75,8 @@ export function useJob(onFinished: (job: Job) => void) {
     async (create: () => Promise<Job>) => {
       stopWatching();
       const created = await create();
-      setStartedAt(Date.now());
+      // When reattaching to a job that is already running, count from its real start.
+      setStartedAt(created.started_at ? created.started_at * 1000 : Date.now());
       setElapsedMs(0);
       setJob(created);
       watch(created.id);

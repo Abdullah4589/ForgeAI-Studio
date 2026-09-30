@@ -19,6 +19,9 @@ import type {
   LoraUpdate,
   ModelInfo,
   SystemInfo,
+  TrainingJob,
+  TrainingRequest,
+  TrainingRun,
   UploadResult,
 } from "./types";
 
@@ -149,6 +152,12 @@ export const api = {
     request<CaptionJob>(`/api/datasets/${datasetId}/captions`, json("POST", body)),
   reorderDataset: (id: number, imageIds: number[]) =>
     request<Dataset>(`/api/datasets/${id}/order`, json("PUT", { image_ids: imageIds })),
+
+  startTraining: (body: TrainingRequest) =>
+    request<TrainingJob>("/api/training", json("POST", body)),
+  listTrainingRuns: (limit = 20) => request<TrainingRun[]>(`/api/training?limit=${limit}`),
+  getTrainingRun: (id: number) => request<TrainingRun>(`/api/training/${id}`),
+  deleteTrainingRun: (id: number) => request<void>(`/api/training/${id}`, { method: "DELETE" }),
 
   getSystem: () => request<SystemInfo>("/api/system"),
   getSettings: () => request<AppSettings>("/api/settings"),
