@@ -13,11 +13,14 @@ export function GenerationStatus({
   job,
   elapsedMs,
   idleText = "Ready. Configure your prompt and press Generate.",
+  runningLabel = "Generating",
 }: {
   job: Job | null;
   elapsedMs: number;
   /** Hint shown before any job has started. */
   idleText?: string;
+  /** What a running job is called, e.g. "Training". */
+  runningLabel?: string;
 }) {
   if (!job) {
     return <p className="text-faint text-sm">{idleText}</p>;
@@ -34,7 +37,9 @@ export function GenerationStatus({
     <div className="space-y-2" aria-live="polite">
       <div className="flex items-center justify-between text-sm">
         <span>
-          <span className="font-medium">{STATUS_LABELS[job.status]}</span>
+          <span className="font-medium">
+            {job.status === "running" ? runningLabel : STATUS_LABELS[job.status]}
+          </span>
           {job.status === "running" && <span className="text-muted"> - {job.message}</span>}
         </span>
         <span className="text-muted font-mono text-xs tabular-nums" aria-label="Duration">

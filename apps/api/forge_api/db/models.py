@@ -206,6 +206,52 @@ class DatasetImage(Base):
     dataset: Mapped[Dataset] = relationship(back_populates="images")
 
 
+class TrainingJob(Base):
+    """One LoRA training run: its settings, live progress and results."""
+
+    __tablename__ = "training_jobs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow, index=True)
+    # Name of the resulting LoRA file (without extension).
+    name: Mapped[str] = mapped_column(String(128))
+    # Sources go NULL if deleted; the name snapshots keep the run readable afterwards.
+    dataset_id: Mapped[int | None] = mapped_column(
+        ForeignKey("datasets.id", ondelete="SET NULL"), index=True
+    )
+    dataset_name: Mapped[str] = mapped_column(String(255))
+    base_model_id: Mapped[int | None] = mapped_column(ForeignKey("models.id", ondelete="SET NULL"))
+    base_model_name: Mapped[str] = mapped_column(String(255))
+    trigger_word: Mapped[str] = mapped_column(String(100), default="")
+    resolution: Mapped[int]
+    rank: Mapped[int]
+    alpha: Mapped[float]
+    learning_rate: Mapped[float]
+    batch_size: Mapped[int]
+    steps: Mapped[int]
+    save_every: Mapped[int]
+    seed: Mapped[int] = mapped_column(BigInteger)
+    sample_count: Mapped[int]
+    sample_steps: Mapped[int]
+    image_count: Mapped[int]
+    # queued | running | completed | failed | cancelled | interrupted
+    status: Mapped[str] = mapped_column(String(16), default="queued")
+    job_id: Mapped[str | None] = mapped_column(String(64))
+    current_step: Mapped[int] = mapped_column(default=0)
+    last_loss: Mapped[float | None]
+    # [[step, loss], ...], thinned so long runs stay small.
+    loss_history: Mapped[list[list[float]]] = mapped_column(JSON, default=list)
+    peak_memory_bytes: Mapped[int | None] = mapped_column(BigInteger)
+    avg_step_seconds: Mapped[float | None]
+    started_at: Mapped[datetime | None]
+    finished_at: Mapped[datetime | None]
+    error_message: Mapped[str | None] = mapped_column(Text)
+    lora_id: Mapped[int | None] = mapped_column(ForeignKey("loras.id", ondelete="SET NULL"))
+    # Paths relative to TRAINING_DIRECTORY.
+    last_checkpoint: Mapped[str | None] = mapped_column(String(1024))
+    samples: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+
+
 class ApplicationSetting(Base):
     __tablename__ = "application_settings"
 

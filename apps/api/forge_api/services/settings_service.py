@@ -41,6 +41,8 @@ def runtime_config(settings: Settings, device: str) -> RuntimeConfigOut:
         generation_backend=settings.generation_backend,
         caption_backend=settings.caption_backend,
         caption_model_directory=str(settings.caption_model_directory),
+        training_backend=settings.training_backend,
+        training_directory=str(settings.training_directory),
         enable_cpu_offload=settings.enable_cpu_offload,
         model_idle_unload_seconds=settings.model_idle_unload_seconds,
         max_upload_size_mb=settings.max_upload_size_mb,

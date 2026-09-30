@@ -31,14 +31,17 @@ storage/*
 !storage/loras/
 !storage/outputs/
 !storage/datasets/
+!storage/training/
 storage/models/*
 storage/loras/*
 storage/outputs/*
 storage/datasets/*
+storage/training/*
 !storage/models/.gitkeep
 !storage/loras/.gitkeep
 !storage/outputs/.gitkeep
 !storage/datasets/.gitkeep
+!storage/training/.gitkeep
 *.db
 *.sqlite3
 

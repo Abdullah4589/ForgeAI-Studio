@@ -82,6 +82,17 @@
 - Cancelling keeps finished captions; the captioner unloads when idle and never shares memory
   with the image-generation model
 
+**LoRA training** (SD 1.x)
+- Train a LoRA from a dataset: base model, trigger word, resolution, rank, alpha, learning rate,
+  batch size, steps, checkpoint interval, seed, plus "Quick test" and "Standard" presets
+- Runs in a separate worker process (Diffusers + PEFT), on CUDA when available or on CPU
+- Live step, progress, loss (with a chart), elapsed and remaining time, and memory use;
+  reloading the page reattaches to a running run
+- Graceful cancel at the next step (the last checkpoint is kept); failures are shown, not hidden
+- The finished LoRA is saved as `.safetensors` (with its rank and alpha) and added to the LoRA
+  library with its trigger word, ready for Generate and Compare; sample images are generated
+- Time estimates come from this machine's own measured pace on earlier runs
+
 **History**
 - Every generation stored with its full settings, duration, device and pipeline configuration
 - Search prompts, filter by model or LoRA, sort by date, paginate, delete
@@ -96,7 +107,8 @@
 - In-process job queue designed to be swapped for Redis/Celery
 - SQLAlchemy 2 + Alembic migrations (SQLite by default, PostgreSQL-ready)
 - Structured JSON logging, friendly error messages, no stack traces to users
-- 198 backend tests, 86 frontend unit tests, 26 Playwright E2E tests; CI runs without a GPU
+- 224 backend tests (+1 opt-in real-training test), 106 frontend unit tests, 29 Playwright E2E
+  tests; CI runs without a GPU
 
 ## Screenshots
 
@@ -105,8 +117,10 @@
 | ![Generate](docs/screenshots/generate.jpg) | ![History](docs/screenshots/history.jpg) |
 | **Compare** | **Datasets** |
 | ![Compare](docs/screenshots/compare.jpg) | ![Datasets](docs/screenshots/datasets.jpg) |
-| **AI captions** | **System** |
-| ![AI captions](docs/screenshots/captions.jpg) | ![System](docs/screenshots/system.jpg) |
+| **AI captions** | **Training** |
+| ![AI captions](docs/screenshots/captions.jpg) | ![Training](docs/screenshots/training.jpg) |
+| **System** | |
+| ![System](docs/screenshots/system.jpg) | |
 
 ## Architecture
 
@@ -118,8 +132,8 @@ flowchart LR
 
     subgraph API["FastAPI (apps/api/forge_api)"]
         R["Routes<br/>(validation, HTTP)"]
-        S["Services<br/>(models, LoRAs, generation, history)"]
-        J["JobManager<br/>(single worker thread)"]
+        S["Services<br/>(models, LoRAs, generation, compare,<br/>datasets, captions, training, history)"]
+        J["JobManager<br/>(one job at a time)"]
         DB[("SQLite / PostgreSQL<br/>via SQLAlchemy + Alembic")]
     end
 
@@ -131,9 +145,15 @@ flowchart LR
         P["Pipeline factory +<br/>architecture registry"]
         L["LoRA inspect / apply"]
         DEV["Device + VRAM helpers"]
+        C["Captioner<br/>(Florence-2 / mock)"]
+        TR["Training runner"]
     end
 
-    FS[("storage/<br/>models · loras · outputs")]
+    subgraph Worker["Training worker process"]
+        TW["ai.training.worker<br/>(Diffusers + PEFT LoRA / mock)"]
+    end
+
+    FS[("storage/<br/>models · loras · outputs ·<br/>datasets · captioners · training")]
 
     UI -- "REST + SSE progress" --> R
     R --> S
@@ -148,7 +168,15 @@ flowchart LR
     P --> FS
     L --> FS
     S -- "PNG files" --> FS
+    J --> C --> FS
+    J --> TR
+    TR -- "spawns; JSON-line progress" --> TW
+    TW -- "LoRA + samples" --> FS
 ```
+
+Training runs in its own process: a crash or out-of-memory error there can't take down the API,
+and all of its memory is returned when it exits. The runner relays its progress to the job and
+the database, then registers the finished LoRA in the library.
 
 **Request flow for a generation**
 
@@ -243,6 +271,8 @@ All settings are environment variables (or a `.env` file in the repo root). See 
 | `DATASET_DIRECTORY` | `./storage/datasets` | Dataset images and thumbnails |
 | `CAPTION_BACKEND` | `florence` | `florence` (real) or `mock` (tests/CI only) |
 | `CAPTION_MODEL_DIRECTORY` | `./storage/captioners/florence-2-base` | Florence-2 model folder |
+| `TRAINING_BACKEND` | `diffusers` | `diffusers` (real, worker process) or `mock` (tests/CI only) |
+| `TRAINING_DIRECTORY` | `./storage/training` | Per-run config, worker log, checkpoints, samples |
 | `DEVICE` | `auto` | `auto`, `cuda` or `cpu` (falls back to CPU if CUDA is missing) |
 | `GENERATION_BACKEND` | `diffusers` | `diffusers` (real) or `mock` (tests/CI only) |
 | `ENABLE_CPU_OFFLOAD` | `false` | Model CPU offload on CUDA (lower VRAM, slower) |
@@ -289,6 +319,13 @@ npx playwright install chromium
 npx playwright test      # E2E; starts the API in mock mode and the web app for you
 ```
 
+Optional, local only: a real 2-step LoRA training run (needs the `[ai]` extra and
+`bk-sdm-tiny`; about 1–2 minutes on CPU; skipped otherwise):
+
+```bash
+FORGE_REAL_TRAINING=1 pytest tests/integration/test_training_real.py
+```
+
 The Playwright suite (`apps/web/e2e/`) covers: app load and navigation, model selection, prompt
 entry, generation with progress and results, metadata and download, validation errors,
 cancellation, history search/filter, reuse settings from history and from a result, LoRA import
@@ -301,6 +338,9 @@ deleting datasets. Dataset test images are generated with a small PNG encoder
 (`apps/web/e2e/images.ts`). For AI captioning (with the mock captioner) it covers captioning
 uncaptioned images while keeping manual ones, the confirmation before replacing manual
 captions, single-image suggestions, captions appearing while the job runs, and cancelling.
+For training (with the mock trainer running in a real worker process) it covers a full run
+through to using the new LoRA on the Generate page, form validation, a failing run, cancelling,
+and reattaching to a running run after a page reload.
 
 ## Docker
 
@@ -336,7 +376,7 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
 - [x] **Phase 2 - Comparison mode:** one prompt across LoRA strengths, seeds and models, side by side
 - [x] **Phase 3 - Dataset manager:** upload, caption, dedupe and quality-check training images
 - [x] **Phase 4 - AI captioning:** vision-language captions with manual review
-- [ ] **Phase 5 - LoRA training:** configurable training with live loss, cancellation and samples
+- [x] **Phase 5 - LoRA training:** configurable training with live loss, cancellation and samples
 
 ## Known limitations
 
@@ -349,6 +389,11 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
   step counts. Flagged images are marked and shown as "Blocked by the safety checker" rather than
   as unexplained black squares. The checker itself can't be turned off from the app. Images
   generated before this was added aren't marked.
+- LoRA training supports SD 1.x only (no SDXL, no text-encoder training, no resuming from a
+  checkpoint yet). It is slow on CPU: with the tiny `bk-sdm-tiny` model on a 12-thread laptop, a
+  step took about 3.4–4.8 s at 256 px and about 13 s at 512 px, so a 512 px run of 800 steps takes
+  roughly 3 hours. Per-step loss is noisy by nature; read the trend. Nothing else (generation,
+  captioning) can run while training.
 - AI captions are suggestions and can be wrong: in testing, Florence-2 described a stylised
   lighthouse as "a man standing atop a rock". Review captions before training. Only Florence-2
   is wired up so far; the captioner interface allows adding others (e.g. SmolVLM, which needs

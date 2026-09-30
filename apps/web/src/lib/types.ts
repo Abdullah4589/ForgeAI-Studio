@@ -163,6 +163,8 @@ export interface AppSettings {
     generation_backend: string;
     caption_backend: string;
     caption_model_directory: string;
+    training_backend: string;
+    training_directory: string;
     enable_cpu_offload: boolean;
     model_idle_unload_seconds: number;
     max_upload_size_mb: number;
@@ -280,4 +282,65 @@ export interface CaptionJob extends Job {
   queued: number;
   skipped_manual: number;
   skipped_existing: number;
+}
+
+export type TrainingStatus =
+  "queued" | "running" | "completed" | "failed" | "cancelled" | "interrupted";
+
+export interface TrainingRequest {
+  dataset_id: number;
+  base_model_id: number;
+  name: string;
+  trigger_word: string;
+  resolution: 256 | 512 | 768;
+  rank: number;
+  alpha: number;
+  learning_rate: number;
+  batch_size: number;
+  steps: number;
+  save_every: number;
+  seed: number | null;
+  sample_count: number;
+  sample_steps: number;
+}
+
+export interface TrainingRun {
+  id: number;
+  created_at: string;
+  name: string;
+  dataset_id: number | null;
+  dataset_name: string;
+  base_model_id: number | null;
+  base_model_name: string;
+  trigger_word: string;
+  resolution: number;
+  rank: number;
+  alpha: number;
+  learning_rate: number;
+  batch_size: number;
+  steps: number;
+  save_every: number;
+  seed: number;
+  sample_count: number;
+  sample_steps: number;
+  image_count: number;
+  status: TrainingStatus;
+  job_id: string | null;
+  current_step: number;
+  last_loss: number | null;
+  /** [step, loss] pairs, thinned for long runs. */
+  loss_history: [number, number][];
+  peak_memory_bytes: number | null;
+  avg_step_seconds: number | null;
+  started_at: string | null;
+  finished_at: string | null;
+  error_message: string | null;
+  lora_id: number | null;
+  has_checkpoint: boolean;
+  samples: { index: number; safety_blocked: boolean }[];
+  sample_urls: string[];
+}
+
+export interface TrainingJob extends Job {
+  run_id: number;
 }
