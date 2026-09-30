@@ -124,6 +124,17 @@ describe("ModelPanel", () => {
     expect(onChange).toHaveBeenCalledWith("loraStrength", 0.6);
   });
 
+  it("says it is loading rather than claiming there are no models", () => {
+    const props = { form: EMPTY_FORM, errors: {}, models: [], loras: [], onChange: vi.fn() };
+    const { rerender } = render(<ModelPanel {...props} loading />);
+    expect(screen.getByRole("option", { name: "Loading models…" })).toBeInTheDocument();
+    expect(screen.queryByText(/No usable models found/)).not.toBeInTheDocument();
+
+    rerender(<ModelPanel {...props} />);
+    expect(screen.getByRole("option", { name: "Select a model" })).toBeInTheDocument();
+    expect(screen.getByText(/No usable models found/)).toBeInTheDocument();
+  });
+
   it("returns no LoRAs without a model", () => {
     expect(compatibleLoras([lora({})], [])).toEqual([]);
   });

@@ -1,3 +1,5 @@
+import threading
+import time
 from pathlib import Path
 
 from ai.model_manager.manager import ModelManager
@@ -47,3 +49,25 @@ def test_unload() -> None:
     manager.load(request("a"))
     assert manager.unload() is True
     assert manager.loaded_request() is None
+
+
+def test_loaded_request_does_not_wait_for_a_running_generation() -> None:
+    manager = ModelManager(RecordingBuilder())
+    manager.load(request("a"))
+    holding = threading.Event()
+    release = threading.Event()
+
+    def generate() -> None:
+        with manager.lock:  # a generation holds this for its whole run
+            holding.set()
+            release.wait(5)
+
+    worker = threading.Thread(target=generate)
+    worker.start()
+    assert holding.wait(5)
+    started = time.monotonic()
+    loaded = manager.loaded_request()
+    assert time.monotonic() - started < 0.5
+    assert loaded is not None and loaded.path == Path("a")
+    release.set()
+    worker.join()

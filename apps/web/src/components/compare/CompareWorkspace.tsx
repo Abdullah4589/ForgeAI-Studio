@@ -239,6 +239,7 @@ export function CompareWorkspace({ comparisonId }: { comparisonId: number | null
             hideModel={axis.kind === "model"}
             hideStrength={axis.kind === "lora_strength"}
             loraTargets={loraTargets}
+            loading={!ready}
           />
           <SettingsPanel
             form={form}
