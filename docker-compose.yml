@@ -27,6 +27,7 @@ services:
       OUTPUT_DIRECTORY: /app/storage/outputs
       DATASET_DIRECTORY: /app/storage/datasets
       CAPTION_MODEL_DIRECTORY: /app/storage/captioners/florence-2-base
+      TRAINING_DIRECTORY: /app/storage/training
       DEVICE: ${DEVICE:-auto}
       GENERATION_BACKEND: ${GENERATION_BACKEND:-diffusers}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -37,6 +38,7 @@ services:
       - ./storage/outputs:/app/storage/outputs
       - ./storage/datasets:/app/storage/datasets
       - ./storage/captioners:/app/storage/captioners
+      - ./storage/training:/app/storage/training
     ports:
       - "8000:8000"
     depends_on:
