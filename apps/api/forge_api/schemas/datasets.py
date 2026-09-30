@@ -41,6 +41,7 @@ class DatasetImageOut(ApiModel):
     blur_score: float
     caption: str
     caption_source: str | None
+    caption_model: str | None
     caption_updated_at: UtcDatetime | None
     created_at: UtcDatetime
     # Derived when read, so they always reflect the current dataset settings and contents.

@@ -195,9 +195,11 @@ class DatasetImage(Base):
     perceptual_hash: Mapped[str] = mapped_column(String(16))
     blur_score: Mapped[float]
     caption: Mapped[str] = mapped_column(Text, default="")
-    # Who wrote the caption ("manual" now; AI captioning will add another source) and when.
-    # AI captioning must not overwrite manual captions without confirmation.
+    # Who wrote the caption ("manual" or "ai") and when. AI captioning must not overwrite
+    # manual captions without explicit confirmation.
     caption_source: Mapped[str | None] = mapped_column(String(16))
+    # For AI captions: which captioner produced it (e.g. "florence-2-base").
+    caption_model: Mapped[str | None] = mapped_column(String(64))
     caption_updated_at: Mapped[datetime | None]
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 

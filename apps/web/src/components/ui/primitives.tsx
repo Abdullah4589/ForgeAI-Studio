@@ -5,10 +5,10 @@ type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const BUTTON_STYLES: Record<ButtonVariant, string> = {
   primary:
-    "bg-accent text-accent-ink hover:bg-accent-strong disabled:bg-raised disabled:text-faint",
-  secondary: "border border-line bg-raised text-ink hover:border-faint disabled:text-faint",
-  ghost: "text-muted hover:bg-raised hover:text-ink disabled:text-faint",
-  danger: "border border-danger/40 text-danger hover:bg-danger/10 disabled:opacity-50",
+    "bg-accent text-accent-ink enabled:hover:bg-accent-strong disabled:bg-raised disabled:text-faint",
+  secondary: "border border-line bg-raised text-ink enabled:hover:border-faint disabled:text-faint",
+  ghost: "text-muted enabled:hover:bg-raised enabled:hover:text-ink disabled:text-faint",
+  danger: "border border-danger/40 text-danger enabled:hover:bg-danger/10 disabled:opacity-50",
 };
 
 export function Button({

@@ -6,6 +6,7 @@ from typing import Literal
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from ai.captioning.types import Captioner
 from ai.generation.types import GenerationBackend
 from ai.model_manager.manager import ModelManager
 from forge_api.config import Settings
@@ -19,5 +20,6 @@ class AppServices:
     session_factory: sessionmaker[Session]
     model_manager: ModelManager
     backend: GenerationBackend
+    captioner: Captioner
     jobs: JobManager
     device: Literal["cuda", "cpu"]

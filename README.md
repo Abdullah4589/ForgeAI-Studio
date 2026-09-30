@@ -71,6 +71,17 @@
   file size, a full-size preview, filters for flagged or uncaptioned images
 - Reorder by drag-and-drop or keyboard-accessible arrows; remove images; rename or delete datasets
 
+**AI captioning** (Florence-2)
+- Suggested training captions for a whole dataset or one image, as a background job with
+  per-image progress; captions appear on the cards as each image finishes
+- Three scopes: uncaptioned only, also refresh earlier AI captions, or every image
+- Captions you wrote are never overwritten without an explicit confirmation, including edits
+  made while a job is running; editing an AI caption makes it yours
+- Each caption shows whether it's AI or manual and which model wrote it
+- Florence's "The image shows…" opener is stripped so captions read like training captions
+- Cancelling keeps finished captions; the captioner unloads when idle and never shares memory
+  with the image-generation model
+
 **History**
 - Every generation stored with its full settings, duration, device and pipeline configuration
 - Search prompts, filter by model or LoRA, sort by date, paginate, delete
@@ -85,7 +96,7 @@
 - In-process job queue designed to be swapped for Redis/Celery
 - SQLAlchemy 2 + Alembic migrations (SQLite by default, PostgreSQL-ready)
 - Structured JSON logging, friendly error messages, no stack traces to users
-- 170 backend tests, 69 frontend unit tests, 22 Playwright E2E tests; CI runs without a GPU
+- 198 backend tests, 86 frontend unit tests, 26 Playwright E2E tests; CI runs without a GPU
 
 ## Screenshots
 
@@ -94,8 +105,8 @@
 | ![Generate](docs/screenshots/generate.jpg) | ![History](docs/screenshots/history.jpg) |
 | **Compare** | **Datasets** |
 | ![Compare](docs/screenshots/compare.jpg) | ![Datasets](docs/screenshots/datasets.jpg) |
-| **System** | |
-| ![System](docs/screenshots/system.jpg) | |
+| **AI captions** | **System** |
+| ![AI captions](docs/screenshots/captions.jpg) | ![System](docs/screenshots/system.jpg) |
 
 ## Architecture
 
@@ -188,6 +199,15 @@ python scripts/download_model.py stabilityai/stable-diffusion-xl-base-1.0 --name
 
 Or copy any Diffusers model folder or `.safetensors` checkpoint into `storage/models/`.
 
+**Get the caption model** (optional, for AI captioning; about 0.47 GB):
+
+```bash
+python scripts/download_model.py --captioner              # florence-community/Florence-2-base
+```
+
+Florence-2 is supported natively by Transformers, so no code from the model repository runs.
+On a 12-thread laptop CPU it took about 11 s to load and about 8 s per image.
+
 ## GPU requirements
 
 | Model family | Minimum VRAM (fp16) | Comfortable |
@@ -221,6 +241,8 @@ All settings are environment variables (or a `.env` file in the repo root). See 
 | `LORA_DIRECTORY` | `./storage/loras` | Where LoRAs are stored and discovered |
 | `OUTPUT_DIRECTORY` | `./storage/outputs` | Generated PNGs |
 | `DATASET_DIRECTORY` | `./storage/datasets` | Dataset images and thumbnails |
+| `CAPTION_BACKEND` | `florence` | `florence` (real) or `mock` (tests/CI only) |
+| `CAPTION_MODEL_DIRECTORY` | `./storage/captioners/florence-2-base` | Florence-2 model folder |
 | `DEVICE` | `auto` | `auto`, `cuda` or `cpu` (falls back to CPU if CUDA is missing) |
 | `GENERATION_BACKEND` | `diffusers` | `diffusers` (real) or `mock` (tests/CI only) |
 | `ENABLE_CPU_OFFLOAD` | `false` | Model CPU offload on CUDA (lower VRAM, slower) |
@@ -276,7 +298,9 @@ the comparison runs, cancelling (finished cells kept), and reopening and deletin
 For datasets it covers uploads (with duplicates and invalid files skipped), captions, reordering
 by arrows and drag-and-drop, preview, removal, every quality flag and filter, and renaming and
 deleting datasets. Dataset test images are generated with a small PNG encoder
-(`apps/web/e2e/images.ts`).
+(`apps/web/e2e/images.ts`). For AI captioning (with the mock captioner) it covers captioning
+uncaptioned images while keeping manual ones, the confirmation before replacing manual
+captions, single-image suggestions, captions appearing while the job runs, and cancelling.
 
 ## Docker
 
@@ -311,7 +335,7 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
 - [x] **Phase 1 - MVP:** generation, model and LoRA management, history, system page, tests, Docker, CI
 - [x] **Phase 2 - Comparison mode:** one prompt across LoRA strengths, seeds and models, side by side
 - [x] **Phase 3 - Dataset manager:** upload, caption, dedupe and quality-check training images
-- [ ] **Phase 4 - AI captioning:** vision-language captions with manual review
+- [x] **Phase 4 - AI captioning:** vision-language captions with manual review
 - [ ] **Phase 5 - LoRA training:** configurable training with live loss, cancellation and samples
 
 ## Known limitations
@@ -325,6 +349,10 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
   step counts. Flagged images are marked and shown as "Blocked by the safety checker" rather than
   as unexplained black squares. The checker itself can't be turned off from the app. Images
   generated before this was added aren't marked.
+- AI captions are suggestions and can be wrong: in testing, Florence-2 described a stylised
+  lighthouse as "a man standing atop a rock". Review captions before training. Only Florence-2
+  is wired up so far; the captioner interface allows adding others (e.g. SmolVLM, which needs
+  `torchvision`).
 - Dataset quality checks are heuristics: "possibly blurry" measures edge strength and can
   misjudge deliberately soft or minimalist images. Datasets hold up to 1,000 images, uploads are
   limited to 50 files per request (the UI batches larger drops), and there's no export yet.
@@ -339,6 +367,8 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
 
 ## Security
 
+- **No remote code.** The caption model uses Transformers' built-in Florence-2 class, never
+  `trust_remote_code`, and the download script skips any `.py` files in model repositories.
 - **No pickle loading.** Models load with `use_safetensors=True`; LoRAs must be `.safetensors`.
   LoRA validation parses only the JSON header, with a size cap, and never executes file content.
 - **Uploads are untrusted:** extension allow-list, streaming size limit, sanitised filenames,

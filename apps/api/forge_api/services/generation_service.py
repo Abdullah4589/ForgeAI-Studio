@@ -65,7 +65,10 @@ def resolve_seed(seed: int | None) -> int:
 def ensure_idle(services: AppServices) -> None:
     # One job at a time keeps memory predictable and makes Cancel unambiguous in the UI.
     if services.jobs.active_job() is not None:
-        raise ConflictError("A generation is already in progress. Wait for it or cancel it.")
+        raise ConflictError(
+            "Another job (generation, comparison or captioning) is running. "
+            "Wait for it or cancel it."
+        )
 
 
 def prepare(

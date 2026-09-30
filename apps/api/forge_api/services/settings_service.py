@@ -39,6 +39,8 @@ def runtime_config(settings: Settings, device: str) -> RuntimeConfigOut:
         dataset_directory=str(settings.dataset_directory),
         device=device,
         generation_backend=settings.generation_backend,
+        caption_backend=settings.caption_backend,
+        caption_model_directory=str(settings.caption_model_directory),
         enable_cpu_offload=settings.enable_cpu_offload,
         model_idle_unload_seconds=settings.model_idle_unload_seconds,
         max_upload_size_mb=settings.max_upload_size_mb,

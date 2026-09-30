@@ -24,6 +24,8 @@ class RuntimeConfigOut(ApiModel):
     dataset_directory: str
     device: str
     generation_backend: str
+    caption_backend: str
+    caption_model_directory: str
     enable_cpu_offload: bool
     model_idle_unload_seconds: int
     max_upload_size_mb: int

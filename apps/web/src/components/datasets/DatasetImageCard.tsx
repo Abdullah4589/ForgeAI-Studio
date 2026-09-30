@@ -19,6 +19,10 @@ interface DatasetImageCardProps {
   onMove: (from: number, to: number) => void;
   onSaveCaption: (image: DatasetImage, caption: string) => Promise<boolean>;
   onRemove: (image: DatasetImage) => void;
+  /** Ask the AI captioner for a suggestion for this one image. */
+  onSuggest: (image: DatasetImage) => void;
+  /** A job is running, so a new caption request can't start. */
+  jobRunning: boolean;
   dragHandlers: {
     onDragStart: () => void;
     onDragOver: (event: React.DragEvent) => void;
@@ -37,11 +41,22 @@ export function DatasetImageCard({
   onMove,
   onSaveCaption,
   onRemove,
+  onSuggest,
+  jobRunning,
   dragHandlers,
 }: DatasetImageCardProps) {
   const [draft, setDraft] = useState(image.caption);
+  const [serverCaption, setServerCaption] = useState(image.caption);
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [confirmingSuggest, setConfirmingSuggest] = useState(false);
+  // When the caption changes on the server (e.g. an AI run finished), show it, unless the user
+  // has unsaved edits in this box. Adjusting state during render avoids an extra effect pass.
+  if (image.caption !== serverCaption) {
+    setServerCaption(image.caption);
+    if (draft.trim() === serverCaption) setDraft(image.caption);
+  }
+  const ownCaption = Boolean(image.caption) && image.caption_source !== "ai";
   const captionId = `caption-${image.id}`;
   const dirty = draft.trim() !== image.caption;
   const label = image.original_filename;
@@ -105,9 +120,18 @@ export function DatasetImageCard({
           </p>
         )}
 
-        <label htmlFor={captionId} className="text-muted text-xs font-medium">
-          Caption
-        </label>
+        <div className="flex items-center justify-between gap-2">
+          <label htmlFor={captionId} className="text-muted text-xs font-medium">
+            Caption
+          </label>
+          {image.caption && (
+            <span title={image.caption_model ? `Written by ${image.caption_model}` : undefined}>
+              <Badge tone={image.caption_source === "ai" ? "accent" : "neutral"}>
+                {image.caption_source === "ai" ? "AI" : "Manual"}
+              </Badge>
+            </span>
+          )}
+        </div>
         <textarea
           id={captionId}
           rows={3}
@@ -129,6 +153,36 @@ export function DatasetImageCard({
           >
             {saving ? "Saving…" : "Save caption"}
           </Button>
+          {confirmingSuggest ? (
+            <>
+              <Button
+                variant="danger"
+                className="px-2 py-1 text-xs"
+                onClick={() => {
+                  setConfirmingSuggest(false);
+                  onSuggest(image);
+                }}
+              >
+                Replace my caption
+              </Button>
+              <Button
+                variant="ghost"
+                className="px-2 py-1 text-xs"
+                onClick={() => setConfirmingSuggest(false)}
+              >
+                Keep
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="ghost"
+              className="px-2 py-1 text-xs"
+              disabled={jobRunning}
+              onClick={() => (ownCaption ? setConfirmingSuggest(true) : onSuggest(image))}
+            >
+              Suggest caption
+            </Button>
+          )}
           <div className="ml-auto flex">
             <IconButton
               label={`Move ${label} up`}

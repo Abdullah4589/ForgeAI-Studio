@@ -23,6 +23,8 @@ function renderCard(overrides: Partial<Parameters<typeof DatasetImageCard>[0]> =
     onMove: vi.fn(),
     onSaveCaption: vi.fn().mockResolvedValue(true),
     onRemove: vi.fn(),
+    onSuggest: vi.fn(),
+    jobRunning: false,
     dragHandlers: noDrag,
     ...overrides,
   };

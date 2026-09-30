@@ -44,6 +44,8 @@ const child = spawn(
       LORA_DIRECTORY: join(storage, "loras"),
       OUTPUT_DIRECTORY: join(storage, "outputs"),
       DATASET_DIRECTORY: join(storage, "datasets"),
+      CAPTION_BACKEND: "mock",
+      MOCK_CAPTION_DELAY_SECONDS: "0.3",
       CORS_ORIGINS: `http://localhost:${webPort},http://127.0.0.1:${webPort}`,
       LOG_LEVEL: "WARNING",
     },

@@ -26,6 +26,7 @@ services:
       LORA_DIRECTORY: /app/storage/loras
       OUTPUT_DIRECTORY: /app/storage/outputs
       DATASET_DIRECTORY: /app/storage/datasets
+      CAPTION_MODEL_DIRECTORY: /app/storage/captioners/florence-2-base
       DEVICE: ${DEVICE:-auto}
       GENERATION_BACKEND: ${GENERATION_BACKEND:-diffusers}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -35,6 +36,7 @@ services:
       - ./storage/loras:/app/storage/loras
       - ./storage/outputs:/app/storage/outputs
       - ./storage/datasets:/app/storage/datasets
+      - ./storage/captioners:/app/storage/captioners
     ports:
       - "8000:8000"
     depends_on:

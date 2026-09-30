@@ -14,6 +14,7 @@ export function image(id: number, overrides: Partial<DatasetImage> = {}): Datase
     blur_score: 900,
     caption: "",
     caption_source: null,
+    caption_model: null,
     caption_updated_at: null,
     created_at: "2026-01-01T00:00:00Z",
     flags: [],

@@ -268,7 +268,11 @@ export function CompareWorkspace({ comparisonId }: { comparisonId: number | null
               )}
             </div>
             <div className="mt-4">
-              <GenerationStatus job={job} elapsedMs={elapsedMs} actionLabel="Compare" />
+              <GenerationStatus
+                job={job}
+                elapsedMs={elapsedMs}
+                idleText="Ready. Configure your prompt and press Compare."
+              />
             </div>
             <div className="mt-3">
               <ErrorBanner message={error} />

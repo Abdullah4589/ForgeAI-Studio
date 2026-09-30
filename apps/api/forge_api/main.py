@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from ai.captioning.factory import create_captioner
 from ai.device import resolve_device
 from ai.generation.factory import create_backend
 from ai.model_manager.manager import ModelManager
@@ -17,6 +18,7 @@ from forge_api.errors import register_error_handlers
 from forge_api.jobs.manager import JobManager
 from forge_api.logging_config import configure_logging
 from forge_api.routes import (
+    captions,
     compare,
     datasets,
     generation,
@@ -46,13 +48,25 @@ def build_services(settings: Settings) -> AppServices:
         enable_cpu_offload=settings.enable_cpu_offload,
         mock_step_delay_seconds=settings.mock_step_delay_seconds,
     )
-    jobs = JobManager(idle_seconds=settings.model_idle_unload_seconds, on_idle=backend.release)
+    captioner = create_captioner(
+        settings.caption_backend,
+        model_dir=settings.caption_model_directory,
+        device=device,
+        mock_delay_seconds=settings.mock_caption_delay_seconds,
+    )
+
+    def release_models() -> None:
+        backend.release()
+        captioner.release()
+
+    jobs = JobManager(idle_seconds=settings.model_idle_unload_seconds, on_idle=release_models)
     return AppServices(
         settings=settings,
         engine=engine,
         session_factory=create_session_factory(engine),
         model_manager=model_manager,
         backend=backend,
+        captioner=captioner,
         jobs=jobs,
         device=device,
     )
@@ -80,6 +94,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         finally:
             services.jobs.shutdown()
             services.backend.release()
+            services.captioner.release()
             services.engine.dispose()
 
     app = FastAPI(title="ForgeAI Studio API", version="0.1.0", lifespan=lifespan)
@@ -90,7 +105,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["Content-Type"],
     )
     register_error_handlers(app)
-    for module in (system, models, loras, generation, compare, history, images, datasets):
+    for module in (
+        system,
+        models,
+        loras,
+        generation,
+        compare,
+        history,
+        images,
+        datasets,
+        captions,
+    ):
         app.include_router(module.router)
     return app
 

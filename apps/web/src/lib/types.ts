@@ -61,7 +61,13 @@ export interface Job {
   created_at: number;
   started_at: number | null;
   finished_at: number | null;
-  result: { generation_id?: number; comparison_id?: number } | null;
+  result: {
+    generation_id?: number;
+    comparison_id?: number;
+    captioned?: number;
+    skipped?: number;
+    failed?: number;
+  } | null;
   error: { code: string; message: string } | null;
 }
 
@@ -155,6 +161,8 @@ export interface AppSettings {
     dataset_directory: string;
     device: string;
     generation_backend: string;
+    caption_backend: string;
+    caption_model_directory: string;
     enable_cpu_offload: boolean;
     model_idle_unload_seconds: number;
     max_upload_size_mb: number;
@@ -214,8 +222,10 @@ export interface DatasetImage {
   file_size_bytes: number;
   blur_score: number;
   caption: string;
-  /** "manual" today; AI captioning will add another source. */
-  caption_source: string | null;
+  /** "manual" or "ai"; AI runs never overwrite manual captions without confirmation. */
+  caption_source: "manual" | "ai" | null;
+  /** Which captioner wrote an AI caption, e.g. "florence-2-base". */
+  caption_model: string | null;
   caption_updated_at: string | null;
   created_at: string;
   flags: QualityFlag[];
@@ -256,4 +266,18 @@ export interface SkippedUpload {
 export interface UploadResult {
   added: DatasetImage[];
   skipped: SkippedUpload[];
+}
+
+/** empty_only: fill blanks. replace_ai: also redo AI captions. everything: also manual ones. */
+export type OverwriteMode = "empty_only" | "replace_ai" | "everything";
+
+export interface CaptionRequest {
+  image_ids?: number[];
+  overwrite: OverwriteMode;
+}
+
+export interface CaptionJob extends Job {
+  queued: number;
+  skipped_manual: number;
+  skipped_existing: number;
 }

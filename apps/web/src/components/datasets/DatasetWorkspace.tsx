@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import {
   Button,
@@ -12,7 +12,9 @@ import {
   PageHeader,
   Panel,
 } from "@/components/ui/primitives";
+import { useJob } from "@/hooks/useJob";
 import { api, errorMessage } from "@/lib/api";
+import { captionSummary } from "@/lib/captions";
 import {
   batches,
   filterImages,
@@ -21,7 +23,15 @@ import {
   uploadSummary,
   type ImageFilter,
 } from "@/lib/datasets";
-import type { Dataset, DatasetImage, DatasetInput, UploadResult } from "@/lib/types";
+import type {
+  Dataset,
+  DatasetImage,
+  DatasetInput,
+  Job,
+  OverwriteMode,
+  UploadResult,
+} from "@/lib/types";
+import { CaptionPanel } from "./CaptionPanel";
 import { DatasetForm } from "./DatasetForm";
 import { DatasetImageCard } from "./DatasetImageCard";
 import { ImagePreviewDialog } from "./ImagePreviewDialog";
@@ -36,6 +46,7 @@ export function DatasetWorkspace({ datasetId }: { datasetId: number }) {
   const [filter, setFilter] = useState<ImageFilter>("all");
   const [preview, setPreview] = useState<DatasetImage | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [captionNotice, setCaptionNotice] = useState<string | null>(null);
   const dragFrom = useRef<number | null>(null);
 
   useEffect(() => {
@@ -74,6 +85,69 @@ export function DatasetWorkspace({ datasetId }: { datasetId: number }) {
       await refresh().catch((err: unknown) => setError(errorMessage(err)));
       setUploading(false);
     }
+  }
+
+  const onJobFinished = useCallback(
+    async (finished: Job) => {
+      if (finished.status === "failed") {
+        setError(finished.error?.message ?? "Captioning failed.");
+      } else if (finished.status === "cancelled") {
+        setCaptionNotice("Captioning cancelled. Finished captions were kept.");
+      } else {
+        setCaptionNotice(captionSummary(finished));
+      }
+      try {
+        setDataset(await api.getDataset(datasetId));
+      } catch (err) {
+        setError(errorMessage(err));
+      }
+    },
+    [datasetId],
+  );
+  const { job, running, elapsedMs, start, cancel } = useJob(onJobFinished);
+
+  // Each finished image advances the job by one step: refetch so captions appear one by one.
+  const captionedSoFar = running && job ? job.step : 0;
+  useEffect(() => {
+    if (captionedSoFar === 0) return;
+    let stale = false;
+    api.getDataset(datasetId).then(
+      (loaded) => {
+        if (!stale) setDataset(loaded);
+      },
+      () => {
+        // Best effort; the full dataset is fetched again when the job ends.
+      },
+    );
+    return () => {
+      stale = true;
+    };
+  }, [captionedSoFar, datasetId]);
+
+  async function startCaptions(mode: OverwriteMode, imageIds?: number[]) {
+    setError(null);
+    setCaptionNotice(null);
+    try {
+      await start(async () => {
+        const created = await api.generateCaptions(datasetId, {
+          overwrite: mode,
+          image_ids: imageIds,
+        });
+        if (created.skipped_manual > 0) {
+          setCaptionNotice(
+            `Keeping ${created.skipped_manual} caption${created.skipped_manual === 1 ? "" : "s"} you wrote.`,
+          );
+        }
+        return created;
+      });
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  async function cancelCaptions() {
+    const cancelError = await cancel();
+    if (cancelError) setError(cancelError);
   }
 
   async function saveCaption(image: DatasetImage, caption: string): Promise<boolean> {
@@ -174,6 +248,20 @@ export function DatasetWorkspace({ datasetId }: { datasetId: number }) {
       </p>
       <ErrorBanner message={error} />
 
+      <CaptionPanel
+        images={dataset.images}
+        job={job}
+        running={running}
+        elapsedMs={elapsedMs}
+        onStart={(mode) => void startCaptions(mode)}
+        onCancel={() => void cancelCaptions()}
+      />
+      {captionNotice && (
+        <p role="status" aria-label="Caption status" className="text-muted text-sm">
+          {captionNotice}
+        </p>
+      )}
+
       <Panel title="Add images">
         <UploadDropzone busy={uploading} onFiles={(files) => void upload(files)} />
         {report && (
@@ -238,6 +326,9 @@ export function DatasetWorkspace({ datasetId }: { datasetId: number }) {
               onMove={(from, to) => void move(from, to)}
               onSaveCaption={saveCaption}
               onRemove={(target) => void remove(target)}
+              // The card has already confirmed if this replaces the user's own caption.
+              onSuggest={(target) => void startCaptions("everything", [target.id])}
+              jobRunning={running}
               dragHandlers={{
                 onDragStart: () => {
                   dragFrom.current = index;

@@ -4,9 +4,11 @@ Guidance for AI coding agents and contributors working on ForgeAI Studio.
 
 ## Current phase
 
-**Phases 1 (MVP), 2 (comparison mode) and 3 (dataset manager) are complete.** Do not start
-Phase 4+ work (AI captioning, LoRA training) unless explicitly asked. When captioning is added,
-respect `DatasetImage.caption_source`: never overwrite a `"manual"` caption without confirmation. See the roadmap in `README.md` and the full specification
+**Phases 1–4 (MVP, comparison mode, dataset manager, AI captioning) are complete.** Do not start
+Phase 5 (LoRA training) unless explicitly asked. Captioning rules live in
+`caption_service.should_caption()`: never overwrite a `"manual"` caption without the explicit
+`everything` mode, and keep `apps/web/src/lib/captions.ts` in sync with it. Keep training code
+separate from captioning (`ai/captioning/` vs a future `ai/training/`). See the roadmap in `README.md` and the full specification
 in `Forge_AI_Studio.md`.
 
 ## Layout
