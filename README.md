@@ -249,6 +249,8 @@ On a 12-thread laptop CPU it took about 11 s to load and about 8 s per image.
 - Low on VRAM? Set `ENABLE_CPU_OFFLOAD=true`. Out-of-memory errors return a friendly message
   suggesting a smaller resolution, fewer images, CPU offload or a lighter model.
 - AMD and Apple GPUs are not supported yet; they fall back to CPU mode.
+- No NVIDIA GPU? Run the API on a rented cloud GPU and keep the web UI on your machine:
+  [docs/cloud-gpu.md](docs/cloud-gpu.md).
 
 ## CPU mode
 
