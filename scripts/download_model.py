@@ -18,7 +18,12 @@ DEFAULT_REPO = "nota-ai/bk-sdm-tiny"
 CAPTIONER_REPO = "florence-community/Florence-2-base"
 CAPTIONER_FOLDER = "florence-2-base"
 
-ALLOW_PATTERNS = ["*.json", "*.txt", "*.safetensors", "*.jinja", "*.model"]
+_CONFIG_PATTERNS = ["*.json", "*.txt", "*.jinja", "*.model"]
+# A Diffusers repo keeps its weights in component folders (unet/, vae/, ...). Many also ship the
+# same model again as multi-GB single-file checkpoints at the top level; "*/" skips those.
+MODEL_ALLOW_PATTERNS = [*_CONFIG_PATTERNS, "*/*.safetensors"]
+# The caption model's weights sit at the top level of its repo.
+CAPTIONER_ALLOW_PATTERNS = [*_CONFIG_PATTERNS, "*.safetensors"]
 IGNORE_PATTERNS = [
     "*.bin",
     "*.fp16.safetensors",
@@ -53,16 +58,18 @@ def main() -> int:
         repo_id = args.repo_id or CAPTIONER_REPO
         target = Path("storage/captioners") / (args.name or CAPTIONER_FOLDER)
         expected = "config.json"
+        allow_patterns = CAPTIONER_ALLOW_PATTERNS
     else:
         repo_id = args.repo_id or DEFAULT_REPO
         target = Path("storage/models") / (args.name or repo_id.split("/")[-1])
         expected = "model_index.json"
+        allow_patterns = MODEL_ALLOW_PATTERNS
 
     print(f"Downloading {repo_id} into {target} ...")
     snapshot_download(
         repo_id=repo_id,
         local_dir=target,
-        allow_patterns=ALLOW_PATTERNS,
+        allow_patterns=allow_patterns,
         ignore_patterns=IGNORE_PATTERNS,
     )
     if not (target / expected).is_file():
