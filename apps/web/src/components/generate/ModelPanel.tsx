@@ -16,6 +16,8 @@ interface ModelPanelProps {
   hideStrength?: boolean;
   /** Models the LoRA must work with; defaults to the selected base model. */
   loraTargets?: ModelInfo[];
+  /** Models are still being fetched; don't claim none exist yet. */
+  loading?: boolean;
 }
 
 export function usableModels(models: ModelInfo[]): ModelInfo[] {
@@ -43,6 +45,7 @@ export function ModelPanel({
   hideModel = false,
   hideStrength = false,
   loraTargets,
+  loading = false,
 }: ModelPanelProps) {
   const available = usableModels(models);
   const selectedModel = models.find((m) => String(m.id) === form.modelId);
@@ -68,7 +71,7 @@ export function ModelPanel({
             }}
             className={inputClass}
           >
-            <option value="">Select a model</option>
+            <option value="">{loading ? "Loading models…" : "Select a model"}</option>
             {available.map((model) => (
               <option key={model.id} value={model.id}>
                 {model.name} ({architectureLabel(model.architecture)})
@@ -78,7 +81,7 @@ export function ModelPanel({
           <FieldError id="model-error" message={errors.modelId} />
         </>
       )}
-      {available.length === 0 && (
+      {!loading && available.length === 0 && (
         <p className="text-muted mt-2 text-xs">
           No usable models found. Add one to the model directory, then rescan on the{" "}
           <Link href="/models" className="text-accent underline-offset-2 hover:underline">

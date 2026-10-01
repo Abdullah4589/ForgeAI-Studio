@@ -180,7 +180,14 @@ export function GenerateWorkspace({ fromGenerationId, autoRun }: GenerateWorkspa
             errors={errors}
             onChange={update}
           />
-          <ModelPanel form={form} errors={errors} models={models} loras={loras} onChange={update} />
+          <ModelPanel
+            form={form}
+            errors={errors}
+            models={models}
+            loras={loras}
+            onChange={update}
+            loading={!ready}
+          />
           <SettingsPanel form={form} errors={errors} onChange={update} />
         </div>
 

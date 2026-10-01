@@ -39,8 +39,10 @@ class ModelManager:
         return self._lock
 
     def loaded_request(self) -> PipelineRequest | None:
-        with self._lock:
-            return self._loaded.request if self._loaded else None
+        # Deliberately lock-free: a generation holds the lock for minutes, and callers (e.g. the
+        # model list) only need a snapshot. Reading one attribute reference is atomic.
+        loaded = self._loaded
+        return loaded.request if loaded else None
 
     def load(self, request: PipelineRequest) -> Any:
         with self._lock:
