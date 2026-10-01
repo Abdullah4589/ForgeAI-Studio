@@ -10,7 +10,10 @@
 
 </div>
 
-![Generate page](docs/screenshots/generate.jpg)
+![Demo: generating an image, then the Compare, Datasets, Training, LoRAs and System pages](docs/demo.gif)
+
+_A real run on a laptop CPU with the small test model. The recording skips the waiting: this
+512×512 image took 3 min 11 s, as the on-screen timer shows._
 
 > **A note on image quality and speed.** Output quality comes from the model you load, and speed
 > from your hardware. The generated images in this README were made on a laptop CPU with
