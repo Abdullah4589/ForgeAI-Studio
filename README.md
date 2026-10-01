@@ -10,9 +10,19 @@
 
 </div>
 
-![Generate page](docs/screenshots/generate.jpg)
+![Demo: generating an image, then the Compare, Datasets, Training, LoRAs and System pages](docs/demo.gif)
 
-> 🎬 **Demo video:** _coming soon_ (`docs/demo.gif` placeholder)
+_A real run on a laptop CPU with the small test model. The recording skips the waiting: this
+512×512 image took 3 min 11 s, as the on-screen timer shows._
+
+> **A note on image quality and speed.** Output quality comes from the model you load, and speed
+> from your hardware. The generated images in this README were made on a laptop CPU with
+> [`bk-sdm-tiny`](https://huggingface.co/nota-ai/bk-sdm-tiny), a deliberately small test model
+> that fits in 8 GB of RAM, so the images are not photorealistic and took minutes each. The app
+> loads any Stable Diffusion 1.x or SDXL model in Diffusers or `.safetensors` format. NVIDIA GPU
+> support is implemented and unit-tested but has not been run on real GPU hardware yet: see
+> [GPU requirements](#gpu-requirements), [CPU mode](#cpu-mode) and
+> [Known limitations](#known-limitations).
 
 ---
 
@@ -107,7 +117,7 @@
 - In-process job queue designed to be swapped for Redis/Celery
 - SQLAlchemy 2 + Alembic migrations (SQLite by default, PostgreSQL-ready)
 - Structured JSON logging, friendly error messages, no stack traces to users
-- 224 backend tests (+1 opt-in real-training test), 106 frontend unit tests, 29 Playwright E2E
+- 227 backend tests (+1 opt-in real-training test), 107 frontend unit tests, 29 Playwright E2E
   tests; CI runs without a GPU
 
 ## Screenshots
@@ -203,7 +213,7 @@ More detail: [`AGENTS.md`](AGENTS.md) (code layout and conventions) and [`docs/g
 Prerequisites: **Python 3.12+**, **Node.js 22+**, git. An NVIDIA GPU is optional.
 
 ```bash
-git clone <your-fork-url> forge-ai-studio
+git clone https://github.com/Abdullah4589/ForgeAI-Studio.git forge-ai-studio
 cd forge-ai-studio
 cp .env.example .env
 
@@ -435,4 +445,5 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
 
 ## License
 
-No license has been chosen yet. Add a `LICENSE` file before publishing.
+© 2026 Abdullah. All rights reserved. The source is public for review; no open-source licence has
+been granted. Models you download keep their own licences.

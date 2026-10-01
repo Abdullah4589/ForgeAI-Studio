@@ -2,3 +2,4 @@
 *.png binary
 *.jpg binary
 *.safetensors binary
+*.gif binary

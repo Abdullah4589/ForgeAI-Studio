@@ -24,7 +24,7 @@ allowance and support SSH. Any Linux machine with an NVIDIA GPU and SSH works th
    below).
 3. Open the Studio's terminal and run:
    ```bash
-   git clone <your-repo-url> forge-ai-studio
+   git clone https://github.com/Abdullah4589/ForgeAI-Studio.git forge-ai-studio
    cd forge-ai-studio
    bash scripts/cloud_setup.sh
    ```
