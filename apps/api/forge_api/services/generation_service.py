@@ -3,6 +3,7 @@
 import logging
 import secrets
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from functools import partial
@@ -22,7 +23,7 @@ from ai.generation.types import (
 from forge_api.container import AppServices
 from forge_api.db.models import DiffusionModel, Generation, GenerationImage
 from forge_api.errors import ConflictError
-from forge_api.jobs.manager import JobContext, JobSnapshot
+from forge_api.jobs.manager import JobBusyError, JobContext, JobSnapshot
 from forge_api.logging_config import truncate
 from forge_api.schemas.generation import GenerateRequest
 from forge_api.services import lora_service, model_service
@@ -62,13 +63,23 @@ def resolve_seed(seed: int | None) -> int:
     return seed if seed is not None else secrets.randbelow(MAX_SEED + 1)
 
 
-def ensure_idle(services: AppServices) -> None:
-    # One job at a time keeps memory predictable and makes Cancel unambiguous in the UI.
-    if services.jobs.active_job() is not None:
+def queue_job(
+    services: AppServices,
+    kind: str,
+    run: Callable[[JobContext], dict[str, Any]],
+) -> JobSnapshot:
+    """Enqueue work only when the worker is idle.
+
+    submit_if_idle holds the manager lock across the check and the registration, so two requests
+    cannot both pass the way a separate ensure_idle() followed by submit() could.
+    """
+    try:
+        return services.jobs.submit_if_idle(kind, run)
+    except JobBusyError as exc:
         raise ConflictError(
             "Another job (generation, comparison, captioning or training) is running. "
             "Wait for it or cancel it."
-        )
+        ) from exc
 
 
 def prepare(
@@ -112,8 +123,7 @@ def prepare(
 def start_generation(db: Session, services: AppServices, request: GenerateRequest) -> JobSnapshot:
     model = model_service.get_model(db, request.model_id)
     prepared = prepare(db, services, model=model, request=request, seed=resolve_seed(request.seed))
-    ensure_idle(services)
-    job = services.jobs.submit(JOB_KIND, partial(_run_generation, services, prepared))
+    job = queue_job(services, JOB_KIND, partial(_run_generation, services, prepared))
     params = prepared.params
     logger.info(
         "generation_requested",

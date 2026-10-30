@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session, selectinload
 from ai.errors import AIError, GenerationCancelledError
 from forge_api.container import AppServices
 from forge_api.db.models import Comparison, Generation
-from forge_api.errors import NotFoundError
+from forge_api.errors import ConflictError, NotFoundError
 from forge_api.jobs.manager import JobContext, JobSnapshot
 from forge_api.logging_config import truncate
 from forge_api.schemas.compare import CompareRequest
@@ -88,13 +88,20 @@ def start_comparison(
 ) -> tuple[JobSnapshot, int]:
     """Queue the comparison; returns the job and the id of the comparison it fills in."""
     planned = plan(db, services, request)
-    generation_service.ensure_idle(services)
     comparison = Comparison(
         prompt=planned.prompt, axis=planned.axis, axis_values=planned.axis_values
     )
     db.add(comparison)
     db.commit()
-    job = services.jobs.submit(JOB_KIND, partial(_run, services, comparison.id, planned))
+    try:
+        job = generation_service.queue_job(
+            services, JOB_KIND, partial(_run, services, comparison.id, planned)
+        )
+    except ConflictError:
+        # The row was committed before the atomic enqueue; drop it if another job won the race.
+        db.delete(comparison)
+        db.commit()
+        raise
     logger.info(
         "comparison_requested",
         extra={

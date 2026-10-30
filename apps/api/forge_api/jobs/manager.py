@@ -88,6 +88,10 @@ class JobContext:
         self._manager._update(self._job, step=step, total_steps=total_steps, message=message)
 
 
+class JobBusyError(Exception):
+    """submit_if_idle found a job that is still queued or running."""
+
+
 class JobManager:
     def __init__(
         self,
@@ -117,13 +121,31 @@ class JobManager:
             self._worker.join(timeout)
 
     def submit(self, kind: str, run: Callable[[JobContext], dict[str, Any]]) -> JobSnapshot:
+        """Enqueue `run` even if another job is still active. Prefer submit_if_idle for API work."""
         job = Job(id=uuid.uuid4().hex, kind=kind, run=run)
         with self._lock:
-            self._jobs[job.id] = job
-            self._evict_old_jobs()
-            snapshot = self._snapshot(job)
+            snapshot = self._register_locked(job)
         self._queue.put(job)
         return snapshot
+
+    def submit_if_idle(self, kind: str, run: Callable[[JobContext], dict[str, Any]]) -> JobSnapshot:
+        """Enqueue `run` only when nothing is queued or running.
+
+        The check and registration share one lock, so concurrent callers cannot all succeed.
+        """
+        job = Job(id=uuid.uuid4().hex, kind=kind, run=run)
+        with self._lock:
+            for existing in self._jobs.values():
+                if not existing.status.is_terminal:
+                    raise JobBusyError
+            snapshot = self._register_locked(job)
+        self._queue.put(job)
+        return snapshot
+
+    def _register_locked(self, job: Job) -> JobSnapshot:
+        self._jobs[job.id] = job
+        self._evict_old_jobs()
+        return self._snapshot(job)
 
     def get(self, job_id: str) -> JobSnapshot | None:
         with self._lock:

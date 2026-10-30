@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from ai.errors import GenerationCancelledError, OutOfMemoryError
-from forge_api.jobs.manager import JobContext, JobManager, JobSnapshot, JobStatus
+from forge_api.jobs.manager import JobBusyError, JobContext, JobManager, JobSnapshot, JobStatus
 
 
 @pytest.fixture
@@ -122,6 +122,49 @@ def test_cancel_queued_job_never_runs(manager: JobManager) -> None:
 
 def test_cancel_unknown_job_returns_none(manager: JobManager) -> None:
     assert manager.cancel("missing") is None
+
+
+def test_submit_if_idle_rejects_until_the_active_job_finishes() -> None:
+    jobs = JobManager()
+    first = jobs.submit_if_idle("test", lambda _: {})
+    with pytest.raises(JobBusyError):
+        jobs.submit_if_idle("test", lambda _: {})
+    assert jobs.cancel(first.id) is not None
+    second = jobs.submit_if_idle("test", lambda _: {})
+    active = jobs.active_job()
+    assert active is not None
+    assert second.id != first.id
+    assert active.id == second.id
+
+
+def test_submit_if_idle_admits_only_one_concurrent_caller() -> None:
+    jobs = JobManager()
+    barrier = threading.Barrier(16)
+    accepted: list[str] = []
+    rejected = 0
+    lock = threading.Lock()
+
+    def attempt() -> None:
+        nonlocal rejected
+        barrier.wait()
+        try:
+            snapshot = jobs.submit_if_idle("test", lambda _: {})
+        except JobBusyError:
+            with lock:
+                rejected += 1
+        else:
+            with lock:
+                accepted.append(snapshot.id)
+
+    threads = [threading.Thread(target=attempt) for _ in range(16)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert len(accepted) == 1
+    assert rejected == 15
+    active = jobs.active_job()
+    assert active is not None and active.id == accepted[0]
 
 
 def test_idle_hook_runs_when_queue_is_quiet() -> None:

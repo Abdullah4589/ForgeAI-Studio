@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, status
 from fastapi.responses import FileResponse
 
-from forge_api.dependencies import DbDep, ServicesDep
+from forge_api.dependencies import DbDep, ServicesDep, require_mutation_auth
 from forge_api.errors import NotFoundError, UnprocessableError
 from forge_api.schemas.datasets import (
     CaptionUpdate,
@@ -25,7 +25,12 @@ def list_datasets(db: DbDep) -> list[DatasetSummary]:
     return dataset_service.list_datasets(db)
 
 
-@router.post("", response_model=DatasetOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=DatasetOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=require_mutation_auth,
+)
 def create_dataset(body: DatasetCreate, db: DbDep) -> DatasetOut:
     return dataset_service.dataset_out(dataset_service.create_dataset(db, body))
 
@@ -35,17 +40,21 @@ def get_dataset(dataset_id: int, db: DbDep) -> DatasetOut:
     return dataset_service.dataset_out(dataset_service.get_dataset(db, dataset_id))
 
 
-@router.patch("/{dataset_id}", response_model=DatasetOut)
+@router.patch("/{dataset_id}", response_model=DatasetOut, dependencies=require_mutation_auth)
 def update_dataset(dataset_id: int, body: DatasetUpdate, db: DbDep) -> DatasetOut:
     return dataset_service.dataset_out(dataset_service.update_dataset(db, dataset_id, body))
 
 
-@router.delete("/{dataset_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{dataset_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=require_mutation_auth
+)
 def delete_dataset(dataset_id: int, db: DbDep, services: ServicesDep) -> None:
     dataset_service.delete_dataset(db, services.settings, dataset_id)
 
 
-@router.post("/{dataset_id}/images", response_model=UploadResult)
+@router.post(
+    "/{dataset_id}/images", response_model=UploadResult, dependencies=require_mutation_auth
+)
 def upload_images(
     dataset_id: int, files: list[UploadFile], db: DbDep, services: ServicesDep
 ) -> UploadResult:
@@ -58,19 +67,27 @@ def upload_images(
     )
 
 
-@router.put("/{dataset_id}/order", response_model=DatasetOut)
+@router.put("/{dataset_id}/order", response_model=DatasetOut, dependencies=require_mutation_auth)
 def reorder(dataset_id: int, body: ReorderRequest, db: DbDep) -> DatasetOut:
     return dataset_service.dataset_out(dataset_service.reorder(db, dataset_id, body.image_ids))
 
 
-@router.patch("/{dataset_id}/images/{image_id}", response_model=DatasetImageOut)
+@router.patch(
+    "/{dataset_id}/images/{image_id}",
+    response_model=DatasetImageOut,
+    dependencies=require_mutation_auth,
+)
 def update_caption(
     dataset_id: int, image_id: int, body: CaptionUpdate, db: DbDep
 ) -> DatasetImageOut:
     return dataset_service.update_caption(db, dataset_id, image_id, body.caption)
 
 
-@router.delete("/{dataset_id}/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{dataset_id}/images/{image_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=require_mutation_auth,
+)
 def delete_image(dataset_id: int, image_id: int, db: DbDep, services: ServicesDep) -> None:
     dataset_service.delete_image(db, services.settings, dataset_id, image_id)
 

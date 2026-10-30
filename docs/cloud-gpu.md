@@ -8,8 +8,9 @@ your machine                                cloud GPU machine
 browser -> web UI (localhost:3000) -> SSH tunnel (localhost:8000) -> API + models + GPU
 ```
 
-The API is never exposed on a public URL: it has no authentication, so it listens on `localhost`
-of the cloud machine and you reach it through an SSH tunnel.
+Keep the API off public URLs. It listens on `localhost` of the cloud machine and you reach it
+through an SSH tunnel. Set `API_TOKEN` (and the same value for the web UI) as well if that
+machine is shared.
 
 This guide uses [Lightning AI](https://lightning.ai) Studios, which have a free monthly GPU
 allowance and support SSH. Any Linux machine with an NVIDIA GPU and SSH works the same way.

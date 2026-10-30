@@ -12,7 +12,7 @@ import {
   PageHeader,
   Panel,
 } from "@/components/ui/primitives";
-import { useJob } from "@/hooks/useJob";
+import { JOB_LOST_CODE, useJob } from "@/hooks/useJob";
 import { api, errorMessage } from "@/lib/api";
 import { captionSummary } from "@/lib/captions";
 import {
@@ -99,7 +99,7 @@ export function DatasetWorkspace({ datasetId }: { datasetId: number }) {
       try {
         setDataset(await api.getDataset(datasetId));
       } catch (err) {
-        setError(errorMessage(err));
+        if (finished.error?.code !== JOB_LOST_CODE) setError(errorMessage(err));
       }
     },
     [datasetId],

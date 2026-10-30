@@ -10,14 +10,20 @@ WORKDIR /app
 
 # CPU wheels by default; docker-compose.gpu.yml switches this to a CUDA wheel index.
 ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
+# false skips torch, diffusers and transformers (demo and machines that only need the mock backends).
+ARG WITH_AI=true
 
 # Install dependencies only (via a stub package) so code changes don't invalidate this layer.
 # The app itself runs from source on PYTHONPATH, which keeps apps/api/migrations next to it.
 COPY pyproject.toml README.md ./
 RUN mkdir -p apps/api/forge_api ai \
     && touch apps/api/forge_api/__init__.py ai/__init__.py \
-    && pip install torch --index-url "$TORCH_INDEX_URL" \
-    && pip install ".[ai,postgres]" \
+    && if [ "$WITH_AI" = "false" ]; then \
+         pip install ".[postgres]"; \
+       else \
+         pip install torch --index-url "$TORCH_INDEX_URL" \
+         && pip install ".[ai,postgres]"; \
+       fi \
     && pip uninstall -y forge-ai-studio \
     && rm -rf apps ai
 

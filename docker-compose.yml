@@ -30,6 +30,10 @@ services:
       TRAINING_DIRECTORY: /app/storage/training
       DEVICE: ${DEVICE:-auto}
       GENERATION_BACKEND: ${GENERATION_BACKEND:-diffusers}
+      CAPTION_BACKEND: ${CAPTION_BACKEND:-florence}
+      TRAINING_BACKEND: ${TRAINING_BACKEND:-diffusers}
+      # Empty disables auth. Set API_TOKEN in a .env file (it is also baked into the web image).
+      API_TOKEN: ${API_TOKEN:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       CORS_ORIGINS: http://localhost:3000
     volumes:
@@ -40,7 +44,8 @@ services:
       - ./storage/captioners:/app/storage/captioners
       - ./storage/training:/app/storage/training
     ports:
-      - "8000:8000"
+      # Localhost only: the API is not reachable from other machines on the network.
+      - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -51,8 +56,9 @@ services:
       dockerfile: docker/web.Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_API_TOKEN: ${API_TOKEN:-}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - api
 

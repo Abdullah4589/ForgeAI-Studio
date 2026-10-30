@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from ai import device
+from forge_api.config import Settings
 from forge_api.logging_config import JsonFormatter, truncate
 from forge_api.schemas.generation import GenerateRequest
 from forge_api.schemas.settings import GenerationDefaults
@@ -52,6 +53,11 @@ def test_invalid_values_are_rejected(field: str, value: Any) -> None:
 def test_unknown_fields_are_rejected() -> None:
     with pytest.raises(ValidationError):
         GenerateRequest.model_validate({**VALID, "sampler": "euler"})
+
+
+def test_blank_api_token_stays_disabled() -> None:
+    assert Settings(api_token="   ").api_token == ""
+    assert Settings(api_token="").api_token == ""
 
 
 def test_generation_defaults_share_limits() -> None:

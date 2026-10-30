@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status
 
-from forge_api.dependencies import ServicesDep
+from forge_api.dependencies import ServicesDep, require_mutation_auth
 from forge_api.schemas.captions import CaptionJobOut, CaptionRequest
 from forge_api.schemas.generation import JobOut
 from forge_api.services import caption_service
@@ -9,7 +9,10 @@ router = APIRouter(prefix="/api/datasets", tags=["captions"])
 
 
 @router.post(
-    "/{dataset_id}/captions", response_model=CaptionJobOut, status_code=status.HTTP_202_ACCEPTED
+    "/{dataset_id}/captions",
+    response_model=CaptionJobOut,
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=require_mutation_auth,
 )
 def generate_captions(
     dataset_id: int, body: CaptionRequest, services: ServicesDep

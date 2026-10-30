@@ -71,9 +71,10 @@ def start_captioning(
         captions = plan(images, request.overwrite)
     if not captions.image_ids:
         raise UnprocessableError("No images need captions with these settings.")
-    generation_service.ensure_idle(services)
-    job = services.jobs.submit(
-        JOB_KIND, partial(_run, services, dataset_id, captions.image_ids, request.overwrite)
+    job = generation_service.queue_job(
+        services,
+        JOB_KIND,
+        partial(_run, services, dataset_id, captions.image_ids, request.overwrite),
     )
     logger.info(
         "captioning_requested",

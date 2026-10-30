@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from forge_api.dependencies import DbDep, ServicesDep
+from forge_api.dependencies import DbDep, ServicesDep, require_mutation_auth
 from forge_api.schemas.settings import GenerationDefaults, SettingsOut
 from forge_api.schemas.system import SystemOut
 from forge_api.services import settings_service, system_service
@@ -26,6 +26,10 @@ def get_settings(db: DbDep, services: ServicesDep) -> SettingsOut:
     )
 
 
-@router.put("/settings/generation-defaults", response_model=GenerationDefaults)
+@router.put(
+    "/settings/generation-defaults",
+    response_model=GenerationDefaults,
+    dependencies=require_mutation_auth,
+)
 def save_generation_defaults(body: GenerationDefaults, db: DbDep) -> GenerationDefaults:
     return settings_service.save_generation_defaults(db, body)

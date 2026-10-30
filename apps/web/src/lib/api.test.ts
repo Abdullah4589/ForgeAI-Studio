@@ -9,7 +9,10 @@ function mockFetch(status: number, body: unknown) {
   return fetchMock;
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 describe("api client", () => {
   it("builds history query strings without empty values", async () => {
@@ -43,5 +46,18 @@ describe("api client", () => {
   it("handles 204 responses", async () => {
     mockFetch(204, null);
     await expect(api.deleteGeneration(1)).resolves.toBeUndefined();
+  });
+
+  it("sends a bearer token only when NEXT_PUBLIC_API_TOKEN is set", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_TOKEN", "");
+    const fetchMock = mockFetch(200, []);
+    await api.listModels();
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("Authorization")).toBeNull();
+
+    vi.stubEnv("NEXT_PUBLIC_API_TOKEN", "s3cret");
+    await api.updateLora(1, { enabled: false });
+    const headers = new Headers(fetchMock.mock.calls[1][1]?.headers);
+    expect(headers.get("Authorization")).toBe("Bearer s3cret");
+    expect(headers.get("Content-Type")).toBe("application/json");
   });
 });

@@ -8,7 +8,7 @@ import { ModelPanel, usableModels } from "@/components/generate/ModelPanel";
 import { PromptPanel } from "@/components/generate/PromptPanel";
 import { SettingsPanel } from "@/components/generate/SettingsPanel";
 import { Button, EmptyState, ErrorBanner, PageHeader, Panel } from "@/components/ui/primitives";
-import { useJob } from "@/hooks/useJob";
+import { JOB_LOST_CODE, useJob } from "@/hooks/useJob";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import {
   buildAxis,
@@ -63,7 +63,7 @@ export function CompareWorkspace({ comparisonId }: { comparisonId: number | null
         if (id !== null) await showComparison(id);
         await refreshRecent();
       } catch (err) {
-        setError(errorMessage(err));
+        if (job.error?.code !== JOB_LOST_CODE) setError(errorMessage(err));
       }
     },
     [showComparison, refreshRecent],
