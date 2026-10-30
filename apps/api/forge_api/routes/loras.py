@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, UploadFile, status
 
 from forge_api.db.models import Lora
-from forge_api.dependencies import DbDep, ServicesDep
+from forge_api.dependencies import DbDep, ServicesDep, require_mutation_auth
 from forge_api.errors import PayloadTooLargeError, UnprocessableError
 from forge_api.schemas.loras import LoraOut, LoraUpdate
 from forge_api.services import lora_service
@@ -17,13 +17,18 @@ def list_loras(db: DbDep) -> list[Lora]:
     return lora_service.list_loras(db)
 
 
-@router.post("/rescan", response_model=list[LoraOut])
+@router.post("/rescan", response_model=list[LoraOut], dependencies=require_mutation_auth)
 def rescan_loras(db: DbDep, services: ServicesDep) -> list[Lora]:
     lora_service.sync_loras(db, services.settings.lora_directory)
     return lora_service.list_loras(db)
 
 
-@router.post("/import", response_model=LoraOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/import",
+    response_model=LoraOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=require_mutation_auth,
+)
 def import_lora(request: Request, file: UploadFile, db: DbDep, services: ServicesDep) -> Lora:
     max_bytes = services.settings.max_upload_bytes
     declared = request.headers.get("content-length", "")
@@ -39,11 +44,13 @@ def import_lora(request: Request, file: UploadFile, db: DbDep, services: Service
     )
 
 
-@router.patch("/{lora_id}", response_model=LoraOut)
+@router.patch("/{lora_id}", response_model=LoraOut, dependencies=require_mutation_auth)
 def update_lora(lora_id: int, body: LoraUpdate, db: DbDep) -> Lora:
     return lora_service.update_lora(db, lora_id, body)
 
 
-@router.delete("/{lora_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{lora_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=require_mutation_auth
+)
 def delete_lora(lora_id: int, db: DbDep, services: ServicesDep) -> None:
     lora_service.delete_lora(db, services.settings.lora_directory, lora_id)

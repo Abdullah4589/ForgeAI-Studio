@@ -62,7 +62,7 @@ interrupted.
 
 **One job at a time.** Generation, comparison, captioning and training all go through
 `jobs/manager.py::JobManager`: one worker thread, in-process, FIFO. Starting a second job while
-one is active is rejected with `409` (`generation_service.ensure_idle`). A job reports progress
+one is active is rejected with `409` (`JobManager.submit_if_idle`). A job reports progress
 through `JobContext`; each change bumps `Job.version`, which the SSE endpoint
 (`GET /api/jobs/{id}/events`) watches. Cancellation is cooperative via `cancel_event`
 (`POST /api/generate/cancel` takes a job id and works for every job kind). When the queue has been idle for

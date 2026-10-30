@@ -8,7 +8,11 @@ FROM node:22-alpine AS build
 WORKDIR /app
 # Baked into the client bundle: the URL the *browser* uses to reach the API.
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL NEXT_TELEMETRY_DISABLED=1
+# Optional. Baked into the browser bundle because the UI calls the API directly. Must match API_TOKEN.
+ARG NEXT_PUBLIC_API_TOKEN=
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_API_TOKEN=$NEXT_PUBLIC_API_TOKEN \
+    NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY apps/web ./
 RUN npm run build

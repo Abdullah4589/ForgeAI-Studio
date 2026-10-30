@@ -48,10 +48,17 @@ export class ApiError extends Error {
   }
 }
 
+function withAuth(init?: RequestInit): RequestInit {
+  const headers = new Headers(init?.headers);
+  const token = process.env.NEXT_PUBLIC_API_TOKEN;
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  return { ...init, headers };
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, init);
+    response = await fetch(`${API_URL}${path}`, withAuth(init));
   } catch {
     throw new ApiError(
       `Cannot reach the ForgeAI API at ${API_URL}. Is the backend running?`,

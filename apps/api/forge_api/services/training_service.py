@@ -62,7 +62,6 @@ def start_training(
         exists = resolve_within(settings.lora_directory, filename).exists()
         if exists or db.scalar(select(Lora).where(Lora.filename == filename)):
             raise ConflictError(f"A LoRA named '{filename}' already exists. Choose another name.")
-        generation_service.ensure_idle(services)
 
         trigger = request.trigger_word.strip()
         items = [
@@ -119,7 +118,14 @@ def start_training(
             sample_steps=run.sample_steps,
             mock_step_delay_seconds=settings.mock_training_step_delay_seconds,
         )
-        job = services.jobs.submit(JOB_KIND, partial(_run, services, run.id, config))
+        try:
+            job = generation_service.queue_job(
+                services, JOB_KIND, partial(_run, services, run.id, config)
+            )
+        except ConflictError:
+            db.delete(run)
+            db.commit()
+            raise
         run.job_id = job.id
         db.commit()
         logger.info(

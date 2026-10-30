@@ -102,12 +102,13 @@ def _open_checked(data: bytes) -> Image.Image:
 def difference_hash(image: Image.Image) -> str:
     """64-bit dHash as 16 hex chars; survives resizing and re-compression of the same picture."""
     small = image.convert("L").resize((9, 8), Image.Resampling.LANCZOS)
-    pixels = list(small.getdata())
+    # Mode L is one byte per pixel, row-major. getdata() is deprecated (removed in Pillow 14).
+    raw = small.tobytes()
     bits = 0
     for row in range(8):
         for col in range(8):
-            left = pixels[row * 9 + col]
-            right = pixels[row * 9 + col + 1]
+            left = raw[row * 9 + col]
+            right = raw[row * 9 + col + 1]
             bits = (bits << 1) | (1 if left > right else 0)
     return f"{bits:016x}"
 

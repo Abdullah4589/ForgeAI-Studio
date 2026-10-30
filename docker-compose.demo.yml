@@ -1,0 +1,12 @@
+# Mock-mode override: no model weights and no PyTorch in the API image.
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build
+services:
+  api:
+    build:
+      args:
+        WITH_AI: "false"
+    environment:
+      DEVICE: cpu
+      GENERATION_BACKEND: mock
+      CAPTION_BACKEND: mock
+      TRAINING_BACKEND: mock

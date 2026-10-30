@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorBanner, PageHeader } from "@/components/ui/primitives";
-import { useJob } from "@/hooks/useJob";
+import { JOB_LOST_CODE, useJob } from "@/hooks/useJob";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import {
   EMPTY_TRAINING_FORM,
@@ -48,6 +48,7 @@ export function TrainingWorkspace() {
   const activeRunId = useRef<number | null>(null);
 
   const onFinished = useCallback(async (finished: Job) => {
+    if (finished.error?.code === JOB_LOST_CODE) setError(finished.error.message);
     try {
       const id = activeRunId.current;
       const run = id === null ? null : await api.getTrainingRun(id);
@@ -57,11 +58,11 @@ export function TrainingWorkspace() {
         setNotice(`Training finished. The LoRA "${run.name}" is ready on the Generate page.`);
       } else if (finished.status === "cancelled") {
         setNotice("Training cancelled.");
-      } else if (finished.status === "failed") {
+      } else if (finished.status === "failed" && finished.error?.code !== JOB_LOST_CODE) {
         setError(finished.error?.message ?? "Training failed.");
       }
     } catch (err) {
-      setError(errorMessage(err));
+      if (finished.error?.code !== JOB_LOST_CODE) setError(errorMessage(err));
     }
   }, []);
   const { job, running, elapsedMs, start, cancel } = useJob(onFinished);

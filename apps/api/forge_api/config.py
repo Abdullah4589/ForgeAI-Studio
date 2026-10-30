@@ -39,11 +39,19 @@ class Settings(BaseSettings):
     # Per-file limit for dataset image uploads.
     max_image_upload_mb: int = Field(default=25, gt=0)
     cors_origins: str = "http://localhost:3000"
+    # When set, mutating routes require Authorization: Bearer <token>. Empty disables the check.
+    api_token: str = ""
 
     @field_validator("log_level")
     @classmethod
     def _upper_log_level(cls, value: str) -> str:
         return value.upper()
+
+    @field_validator("api_token")
+    @classmethod
+    def _strip_api_token(cls, value: str) -> str:
+        # Whitespace-only values stay disabled so a blank .env line does not lock the API.
+        return value.strip()
 
     @property
     def max_upload_bytes(self) -> int:

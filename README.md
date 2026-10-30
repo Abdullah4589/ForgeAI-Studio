@@ -4,7 +4,7 @@
 
 **A self-hosted studio for generating images with open-source diffusion models and LoRA adapters, on your own GPU or CPU.**
 
-[![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
+[![CI](https://github.com/Abdullah4589/ForgeAI-Studio/actions/workflows/ci.yml/badge.svg)](https://github.com/Abdullah4589/ForgeAI-Studio/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs)
 
@@ -117,7 +117,7 @@ _A real run on a laptop CPU with the small test model. The recording skips the w
 - In-process job queue designed to be swapped for Redis/Celery
 - SQLAlchemy 2 + Alembic migrations (SQLite by default, PostgreSQL-ready)
 - Structured JSON logging, friendly error messages, no stack traces to users
-- 227 backend tests (+1 opt-in real-training test), 107 frontend unit tests, 29 Playwright E2E
+- 254 backend tests (+1 opt-in real-training test), 112 frontend unit tests, 29 Playwright E2E
   tests; CI runs without a GPU
 
 ## Screenshots
@@ -293,7 +293,9 @@ All settings are environment variables (or a `.env` file in the repo root). See 
 | `MAX_IMAGE_UPLOAD_MB` | `25` | Per-file limit for dataset images |
 | `LOG_LEVEL` | `INFO` | Python log level (JSON logs) |
 | `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated browser origins allowed to call the API |
+| `API_TOKEN` | *(empty)* | When set, mutating routes require `Authorization: Bearer <token>`. Reads stay open |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | API URL used by the browser (frontend) |
+| `NEXT_PUBLIC_API_TOKEN` | *(empty)* | Bearer token the browser sends. Optional if `API_TOKEN` is in the repo-root `.env`; the dev server and production build copy it. The value is visible in the page bundle |
 
 Default generation parameters (size, steps, guidance, negative prompt, count) are editable in the
 **Settings** page and stored in the database.
@@ -358,12 +360,23 @@ and reattaching to a running run after a page reload.
 
 ```bash
 docker compose up --build          # PostgreSQL + API (CPU) + web UI
+docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build
 ```
 
-- Web UI: <http://localhost:3000>, API: <http://localhost:8000>
-- `./storage/{models,loras,outputs}` are mounted into the API container.
+- Web UI: <http://localhost:3000>, API: <http://localhost:8000>. Published ports bind to
+  `127.0.0.1` only.
+- `./storage/{models,loras,outputs,datasets,captioners,training}` are mounted into the API
+  container. `CAPTION_BACKEND` and `TRAINING_BACKEND` are passed through from the environment
+  (defaults: `florence` and `diffusers`).
+- The demo override runs generation, captioning and training in mock mode and builds the API
+  image with `WITH_AI=false`, which skips the PyTorch, Diffusers and Transformers install.
+  The same build arg works on its own:
+  `docker build -f docker/api.Dockerfile --build-arg WITH_AI=false .`
 - NVIDIA GPUs: `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build`,
   see [docs/gpu-docker.md](docs/gpu-docker.md).
+- Set `API_TOKEN` in a `.env` file next to the compose file to require a bearer token. Compose
+  passes it to the API and bakes the same value into the web image, so changing it means
+  rebuilding the web service.
 
 Docker is optional; everything also runs natively (see above).
 
@@ -414,13 +427,15 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
   misjudge deliberately soft or minimalist images. Datasets hold up to 1,000 images, uploads are
   limited to 50 files per request (the UI batches larger drops), and there's no export yet.
 - AMD (ROCm/DirectML) and Apple Silicon (MPS) acceleration are not wired up; they use CPU mode.
-- The job queue is in-process: jobs are lost if the API restarts, and it doesn't scale across
+- The job queue is in-process: jobs are lost if the API restarts. The UI stops polling on a 404
+  or after several failed checks and shows that the job was lost. The queue doesn't scale across
   workers yet.
 - Model and LoRA preview images are stored as metadata fields, but there is no UI to set them yet.
 - The CUDA paths (fp16, CPU offload, OOM handling) are unit-tested with fakes. Real generation was
   verified on CPU only; CI has no GPU.
 - The GPU Docker override is documented but not verified on NVIDIA hardware.
-- No authentication: run it on a trusted machine or network only.
+- Set `API_TOKEN` before exposing the API beyond localhost. Docker Compose publishes ports on
+  `127.0.0.1` only. The token is a shared deployment secret: the browser bundle includes it.
 
 ## Security
 
@@ -441,9 +456,13 @@ Adapters whose architecture can't be determined are allowed, and a failed load i
   truncated in logs, and no secrets are logged.
 - **Configuration** comes from environment variables. `.env` files are git-ignored, and the Docker
   Postgres password is a local-development default you should override.
-- **No authentication yet:** don't expose the API to the internet.
+- **Optional API token.** When `API_TOKEN` is set, mutating routes (import, upload, rescan,
+  load/unload, generate, compare, caption, train, deletes and settings writes) require
+  `Authorization: Bearer <token>`. Health checks and other reads stay open. Leave it empty only
+  on a trusted machine. The web app sends `NEXT_PUBLIC_API_TOKEN`, or `API_TOKEN` from the
+  repo-root `.env` during `next dev` / `next build`. Anyone who can load the UI can read the
+  token from the bundle.
 
 ## License
 
-© 2026 Abdullah. All rights reserved. The source is public for review; no open-source licence has
-been granted. Models you download keep their own licences.
+[MIT](LICENSE) © 2026 Abdullah Muhammad Abdul Haleem. Models you download keep their own licences.

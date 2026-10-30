@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, status
 from fastapi.responses import FileResponse
 
-from forge_api.dependencies import DbDep, ServicesDep
+from forge_api.dependencies import DbDep, ServicesDep, require_mutation_auth
 from forge_api.schemas.generation import JobOut
 from forge_api.schemas.training import TrainingJobOut, TrainingRequest, TrainingRunOut
 from forge_api.services import training_service
@@ -11,7 +11,12 @@ from forge_api.services import training_service
 router = APIRouter(prefix="/api/training", tags=["training"])
 
 
-@router.post("", response_model=TrainingJobOut, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "",
+    response_model=TrainingJobOut,
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=require_mutation_auth,
+)
 def start_training(body: TrainingRequest, services: ServicesDep) -> TrainingJobOut:
     """Queue a LoRA training run. Progress and cancellation use the generic /api/jobs endpoints."""
     job, run = training_service.start_training(services, body)
@@ -30,7 +35,9 @@ def get_run(run_id: int, db: DbDep) -> TrainingRunOut:
     return training_service.run_out(training_service.get_run(db, run_id))
 
 
-@router.delete("/{run_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{run_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=require_mutation_auth
+)
 def delete_run(run_id: int, db: DbDep, services: ServicesDep) -> None:
     training_service.delete_run(db, services, run_id)
 

@@ -1,3 +1,5 @@
+> Archived original build specification (moved from the repository root). Living conventions are in [`AGENTS.md`](../AGENTS.md).
+
 # ForgeAI Studio
 
 Build a production-quality full-stack application called **ForgeAI Studio**.

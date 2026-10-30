@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, status
 
 from forge_api.db.models import Comparison
-from forge_api.dependencies import DbDep, ServicesDep
+from forge_api.dependencies import DbDep, ServicesDep, require_mutation_auth
 from forge_api.schemas.compare import (
     CompareJobOut,
     CompareRequest,
@@ -25,7 +25,12 @@ def _comparison_out(comparison: Comparison) -> ComparisonOut:
     )
 
 
-@router.post("/compare", response_model=CompareJobOut, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/compare",
+    response_model=CompareJobOut,
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=require_mutation_auth,
+)
 def compare(body: CompareRequest, db: DbDep, services: ServicesDep) -> CompareJobOut:
     """Queue a comparison. Progress and cancellation use the generic /api/jobs endpoints."""
     job, comparison_id = compare_service.start_comparison(db, services, body)
@@ -45,6 +50,10 @@ def get_comparison(comparison_id: int, db: DbDep) -> ComparisonOut:
     return _comparison_out(compare_service.get_comparison(db, comparison_id))
 
 
-@router.delete("/comparisons/{comparison_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/comparisons/{comparison_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=require_mutation_auth,
+)
 def delete_comparison(comparison_id: int, db: DbDep, services: ServicesDep) -> None:
     compare_service.delete_comparison(db, services.settings.output_directory, comparison_id)
