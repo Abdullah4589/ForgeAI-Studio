@@ -1,12 +1,12 @@
 """Real image generation with Hugging Face Diffusers."""
 
-import importlib
 import logging
 from typing import Any, Literal
 
-from ai.device import release_memory
+from ai.device import limit_cpu_threads, load_torch, release_memory
 from ai.errors import (
     AIError,
+    DependencyMissingError,
     GenerationCancelledError,
     GenerationFailedError,
     OutOfMemoryError,
@@ -75,7 +75,13 @@ class DiffusersBackend:
         on_progress: ProgressCallback,
         cancel: CancelToken,
     ) -> GenerationOutput:
-        torch = importlib.import_module("torch")
+        torch = load_torch()
+        if torch is None:
+            raise DependencyMissingError(
+                'AI dependencies are not installed. Install them with: pip install -e ".[ai]"'
+            )
+        if self._device == "cpu":
+            limit_cpu_threads(torch)
         if params.lora is not None:
             apply_lora(pipe, params.lora.path, params.lora.strength)
 
@@ -109,7 +115,11 @@ class DiffusersBackend:
             logger.warning("generation_out_of_memory", extra={"device": self._device})
             raise OutOfMemoryError() from exc
         except RuntimeError as exc:
-            if "out of memory" in str(exc).lower():
+            message = str(exc).lower()
+            # CUDA says "out of memory". The CPU allocator says "not enough memory",
+            # and Windows sometimes reports a paging file that is too small.
+            oom_markers = ("out of memory", "not enough memory", "paging file is too small")
+            if any(marker in message for marker in oom_markers):
                 raise OutOfMemoryError() from exc
             logger.exception("generation_runtime_error")
             raise GenerationFailedError(

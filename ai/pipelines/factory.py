@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from ai.device import limit_cpu_threads, load_torch
 from ai.errors import DependencyMissingError, ModelLoadError, UnsupportedModelError
 from ai.pipelines.registry import get_spec
 
@@ -42,7 +43,13 @@ def build_pipeline(request: PipelineRequest) -> Any:
             f"Model architecture '{request.architecture}' is not supported yet."
         )
     diffusers = import_diffusers()
-    torch = importlib.import_module("torch")
+    torch = load_torch()
+    if torch is None:
+        raise DependencyMissingError(
+            'AI dependencies are not installed. Install them with: pip install -e ".[ai]"'
+        )
+    if request.device == "cpu":
+        limit_cpu_threads(torch)
     pipeline_cls = getattr(diffusers, spec.pipeline_class)
     # fp16 halves VRAM on GPU; most CPU kernels need fp32.
     dtype = torch.float16 if request.device == "cuda" else torch.float32
@@ -67,9 +74,10 @@ def build_pipeline(request: PipelineRequest) -> Any:
 
 
 def _apply_memory_optimisations(pipe: Any, request: PipelineRequest) -> None:
-    # Diffusers uses PyTorch SDPA (memory-efficient attention) by default on torch>=2,
-    # so no extra attention backend is needed.
-    pipe.enable_attention_slicing()
+    # CUDA keeps PyTorch SDPA, which is already memory-efficient. On CPU that kernel falls
+    # back to a dense score matrix (256MB at 512px on this machine), so slice one head at a time.
+    if request.device == "cpu" and hasattr(pipe, "enable_attention_slicing"):
+        pipe.enable_attention_slicing("max")
     if hasattr(pipe, "enable_vae_slicing"):
         pipe.enable_vae_slicing()
     if request.device == "cuda" and request.enable_cpu_offload:

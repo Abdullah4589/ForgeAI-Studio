@@ -255,7 +255,7 @@ On a 12-thread laptop CPU it took about 11 s to load and about 8 s per image.
 
 - NVIDIA GPU with a recent driver. Install the PyTorch build matching your CUDA version from
   <https://pytorch.org/get-started/locally/>, e.g. `pip install torch --index-url https://download.pytorch.org/whl/cu124`.
-- On CUDA, weights load in fp16 and attention slicing, VAE slicing and PyTorch SDPA keep memory down.
+- On CUDA, weights load in fp16. VAE slicing and PyTorch SDPA keep memory down.
 - Low on VRAM? Set `ENABLE_CPU_OFFLOAD=true`. Out-of-memory errors return a friendly message
   suggesting a smaller resolution, fewer images, CPU offload or a lighter model.
 - AMD and Apple GPUs are not supported yet; they fall back to CPU mode.
@@ -264,8 +264,11 @@ On a 12-thread laptop CPU it took about 11 s to load and about 8 s per image.
 
 ## CPU mode
 
-With no CUDA device (or `DEVICE=cpu`) ForgeAI Studio runs everything on the CPU in fp32. It works,
-but it is slow: on a 12-thread laptop CPU with 8 GB RAM, the bundled `bk-sdm-tiny` model took
+With no CUDA device (or `DEVICE=cpu`) ForgeAI Studio runs everything on the CPU in fp32.
+Attention is sliced one head at a time so the score matrix stays small, and BLAS thread pools
+are capped at 4 (set `OMP_NUM_THREADS` in the environment before starting the API) so they
+don't reserve a workspace per core. It works, but it is slow: on a 12-thread laptop CPU with
+8 GB RAM, the bundled `bk-sdm-tiny` model took
 about 1 minute to load and about 6 minutes for 15 steps at 512×512 (about 2 minutes for 10 steps
 at 384×384). Tips: use small distilled
 models, fewer steps and one image at a time, and close other memory-hungry apps.

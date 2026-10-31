@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from typing import Any
 
 import pytest
@@ -67,11 +68,52 @@ def test_generation_defaults_share_limits() -> None:
 
 def test_resolve_device_falls_back_to_cpu(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(device, "cuda_available", lambda: False)
+    monkeypatch.setattr(device, "limit_cpu_threads", lambda _torch=None: None)
     assert device.resolve_device("auto") == "cpu"
     assert device.resolve_device("cuda") == "cpu"
     monkeypatch.setattr(device, "cuda_available", lambda: True)
     assert device.resolve_device("auto") == "cuda"
     assert device.resolve_device("cpu") == "cpu"
+
+
+def test_cpu_preference_caps_threads_even_when_cuda_exists(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OMP_NUM_THREADS", "4")
+    monkeypatch.setattr(device, "_interop_capped", False)
+    monkeypatch.setattr(device, "cuda_available", lambda: True)
+    calls: list[int] = []
+
+    class Torch:
+        @staticmethod
+        def set_num_threads(count: int) -> None:
+            calls.append(count)
+
+    monkeypatch.setattr(device, "load_torch", lambda: Torch())
+    assert device.resolve_device("cpu") == "cpu"
+    assert calls == [4]
+    assert device.resolve_device("auto") == "cuda"
+    assert calls == [4]
+
+
+def test_cpu_thread_cap_respects_an_explicit_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(device, "_interop_capped", False)
+    for name in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+        monkeypatch.setenv(name, "2")
+    calls: list[int] = []
+    interop: list[int] = []
+
+    class Torch:
+        @staticmethod
+        def set_num_threads(count: int) -> None:
+            calls.append(count)
+
+        @staticmethod
+        def set_num_interop_threads(count: int) -> None:
+            interop.append(count)
+
+    device.limit_cpu_threads(Torch())
+    assert os.environ["OMP_NUM_THREADS"] == "2"
+    assert calls == [2]
+    assert interop == [1]
 
 
 def test_gpu_info_without_torch(monkeypatch: pytest.MonkeyPatch) -> None:

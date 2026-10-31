@@ -163,6 +163,19 @@ def test_diffusers_backend_maps_runtime_oom_message(fake_torch: Any) -> None:
         backend.generate(params(), lambda s, t: None, threading.Event())
 
 
+@pytest.mark.parametrize(
+    "message",
+    [
+        "DefaultCPUAllocator: not enough memory: you tried to allocate 268435456 bytes.",
+        "OSError: [WinError 1455] The paging file is too small for this operation to complete",
+    ],
+)
+def test_diffusers_backend_maps_cpu_allocator_oom(fake_torch: Any, message: str) -> None:
+    backend, _ = backend_for(FakePipe(error=RuntimeError(message)))
+    with pytest.raises(OutOfMemoryError, match="smaller resolution"):
+        backend.generate(params(), lambda s, t: None, threading.Event())
+
+
 def test_diffusers_backend_hides_other_runtime_errors(fake_torch: Any) -> None:
     backend, _ = backend_for(FakePipe(error=RuntimeError("shape mismatch at layer 3")))
     with pytest.raises(GenerationFailedError) as info:
